@@ -64,8 +64,7 @@ Found a bug or have an idea for a new mini game? Open an [issue](../../issues). 
 
 ## License
 
-Code under the [MIT license](LICENSE). The tunes in the music player are public domain, and the games and music loops are original.
-
+AD Arcade is **free to flash and share, but not open source**. You can flash it on your own devices and share the unmodified firmware with credit and a link to this page. Selling it, publishing modified copies or presenting it as your own work is not allowed. See [LICENSE](LICENSE) for details. Third-party libraries keep their own licenses, and the tunes in the music player are public domain.
 ---
 
 # Français
