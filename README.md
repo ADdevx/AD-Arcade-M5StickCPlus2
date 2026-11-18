@@ -45,7 +45,7 @@ Also included: **Chrome Dino, Meteors, Maze, Breakout, Invaders, Slalom, Stack**
 **Manual:** download `AD-Arcade-M5StickCPlus2-v1.3.bin` from the [Releases](../../releases) page and flash it at address `0x0`:
 
 ```
-esptool.py --chip esp32 --port <your port> write_flash 0x0 AD-Arcade-M5StickCPlus2-v1.3.bin
+esptool.py --chip esp32 --port COM<your number port> write_flash 0x0 AD-Arcade-M5StickCPlus2-v1.3.bin
 ```
 
 ## Build from source
