@@ -47,6 +47,10 @@ Also included: **Chrome Dino, Meteors, Maze, Breakout, Invaders, Slalom, Stack**
 ```
 esptool.py --chip esp32 --port COM<your number port> write_flash 0x0 AD-Arcade-M5StickCPlus2-v1.3.bin
 ```
+Or
+```
+esptool --chip esp32 --port COM<your number port> write_flash 0x0 AD-Arcade-M5StickCPlus2-v1.3.bin
+```
 
 ## Build from source
 
