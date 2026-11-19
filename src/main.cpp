@@ -11,6 +11,7 @@ int  g_bright = 2;
 bool g_sound = true;
 bool g_music = true;
 int  g_sleepIdx = 1;
+int  g_theme = 0;                             // theme de couleurs du menu
 int  g_lang = 0;                              // 0 = English, 1 = Francais
 bool g_quit = false;
 static const int BRI[5] = {30, 70, 120, 180, 255};
@@ -18,8 +19,9 @@ static const uint32_t SLEEP_MS[5] = {30000, 60000, 120000, 300000, 0};
 static Preferences mp;
 
 void applyBrightness() { M5.Display.setBrightness(BRI[g_bright]); }
-void saveSettings() { mp.putInt("bri", g_bright); mp.putBool("snd", g_sound); mp.putBool("mus", g_music); mp.putInt("slp", g_sleepIdx); mp.putInt("lang", g_lang); }
+void saveSettings() { mp.putInt("bri", g_bright); mp.putBool("snd", g_sound); mp.putBool("mus", g_music); mp.putInt("slp", g_sleepIdx); mp.putInt("lang", g_lang); mp.putInt("theme", g_theme); }
 void present(int ox, int oy) {
+  trophy::banner();
   static float z = -1;
   if (z < 0) { int w = M5.Display.width(), h = M5.Display.height(); if (w < h) { int t = w; w = h; h = t; } z = (w >= SCR_W && h >= SCR_H) ? 0 : fminf((float)w / SCR_W, (float)h / SCR_H); }
   if (z == 0) canvas.pushSprite(ox, oy);
@@ -78,6 +80,7 @@ static const GameDef GAMES[] = {
   {"TETRIS",         "TETRIS",         tetris::begin,   tetris::loop,   tetris::icon},
   {"SNAKE",          "SNAKE",          snake::begin,    snake::loop,    snake::icon},
   {"LUNAR LANDER",   "ALUNISSAGE",     lander::begin,   lander::loop,   lander::icon},
+  {"TROPHIES",       "TROPHEES",       trophy::begin,   trophy::loop,   trophy::icon},
   {"MUSIC",          "MUSIQUE",        music::begin,    music::loop,    music::icon},
   {"SETTINGS",       "REGLAGES",       settings::begin, settings::loop, settings::icon},
 };
@@ -110,13 +113,28 @@ static Star stars[40]; static bool starsInit = false;
 static void initStars() { for (auto &s : stars) s = {(float)rnd(0, SCR_W), (float)rnd(0, SCR_H), 0.15f + (float)rnd(0, 100) / 120.0f}; starsInit = true; }
 
 static uint32_t toastT = 0; static bool adapted = false;                                    // message "FLAT / UPRIGHT" apres une (re)stabilisation
-static const uint16_t ACC_RGB[17][3] = {                       // couleur d'ambiance de chaque entree
-  {120,200,120},{250,210,60},{120,160,255},{110,220,200},{250,120,90},{120,230,130},{90,190,255},{255,170,70},{240,70,70},{90,170,255},{70,200,230},{70,150,255},{170,90,240},{90,220,90},{200,200,220},{255,110,190},{170,176,200}};
-static uint16_t accOf(int idx) { const uint16_t* c = ACC_RGB[idx % 17]; return rgb(c[0], c[1], c[2]); }
+static const uint16_t ACC_RGB[18][3] = {                       // couleur d'ambiance de chaque entree
+  {120,200,120},{250,210,60},{120,160,255},{110,220,200},{250,120,90},{120,230,130},{90,190,255},{255,170,70},{240,70,70},{90,170,255},{70,200,230},{70,150,255},{170,90,240},{90,220,90},{200,200,220},{255,200,60},{255,110,190},{170,176,200}};
+static uint16_t accOf(int idx) { const uint16_t* c = ACC_RGB[idx % 18]; return rgb(c[0], c[1], c[2]); }
+
+// ----------------------------------------------------------------------------- themes de couleurs du menu
+struct Theme { const char* en; const char* fr; uint8_t acc[3], top[3], bot[3], mtnFar[3], mtnNear[3], ground[3]; };
+static const Theme THEMES[] = {
+  {"Auto",    "Auto",     {0, 0, 0},       {8, 8, 30},   {66, 26, 92},  {24, 14, 52}, {34, 18, 66}, {20, 10, 44}},   // couleur propre a chaque jeu
+  {"Ocean",   "Ocean",    {60, 200, 255},  {4, 12, 34},  {10, 64, 110}, {8, 30, 62},  {10, 44, 84}, {6, 24, 50}},
+  {"Sunset",  "Coucher",  {255, 130, 60},  {30, 8, 28},  {140, 44, 56}, {60, 16, 40}, {86, 24, 48}, {40, 10, 30}},
+  {"Forest",  "Foret",    {90, 230, 120},  {4, 22, 16},  {16, 74, 50},  {8, 40, 30},  {12, 58, 40}, {6, 34, 24}},
+  {"Sakura",  "Sakura",   {255, 130, 200}, {32, 8, 36},  {130, 44, 116},{66, 18, 70}, {94, 28, 90}, {44, 12, 50}},
+  {"Gold",    "Or",       {255, 210, 80},  {22, 16, 4},  {100, 70, 12}, {50, 34, 8},  {74, 52, 10}, {36, 24, 6}},
+  {"Mono",    "Mono",     {220, 224, 240}, {10, 10, 14}, {54, 54, 66},  {26, 26, 34}, {38, 38, 48}, {18, 18, 24}},
+};
+int  themeCount() { return sizeof(THEMES) / sizeof(THEMES[0]); }
+const char* themeName(int i) { return g_lang ? THEMES[i].fr : THEMES[i].en; }
+static inline uint16_t thc(const uint8_t* c) { return rgb(c[0], c[1], c[2]); }
 
 static void drawBackdrop(uint16_t acc) {                       // ciel degrade + aurore + etoiles + montagnes + sol en grille
   uint32_t t = millis();
-  for (int y = 0; y < 84; y += 3) canvas.fillRect(0, y, SCR_W, 3, mixc(mixc(rgb(8, 8, 30), acc, 22), mixc(rgb(66, 26, 92), acc, 40), y * 256 / 84));
+  for (int y = 0; y < 84; y += 3) canvas.fillRect(0, y, SCR_W, 3, mixc(mixc(thc(THEMES[g_theme].top), acc, 22), mixc(thc(THEMES[g_theme].bot), acc, 40), y * 256 / 84));
   for (int i = 0; i < 3; i++) {                                // bandes d'aurore ondulantes
     for (int x = 0; x < SCR_W; x += 4) {
       int yy = 26 + i * 14 + (int)(sinf(x * 0.035f + t * 0.0012f * (i + 1) + i * 2.0f) * 9);
@@ -131,14 +149,14 @@ static void drawBackdrop(uint16_t acc) {                       // ciel degrade +
     canvas.drawPixel((int)s2.x, (int)s2.y % 82, c); if (s2.v > 0.8f) canvas.drawPixel((int)s2.x + 1, (int)s2.y % 82, c);
   }
   for (int layer = 0; layer < 2; layer++) {                    // montagnes lointaines (parallaxe)
-    uint16_t mc = layer ? mixc(rgb(34, 18, 66), acc, 26) : mixc(rgb(24, 14, 52), acc, 14);
+    uint16_t mc = layer ? mixc(thc(THEMES[g_theme].mtnNear), acc, 26) : mixc(thc(THEMES[g_theme].mtnFar), acc, 14);
     for (int x = 0; x < SCR_W; x += 2) {
       float wx = x + t * (layer ? 0.010f : 0.004f);
       int h = (int)(10 + layer * 6 + sinf(wx * 0.045f + layer * 2.2f) * 7 + sinf(wx * 0.11f + layer) * 3);
       canvas.fillRect(x, 84 - h, 2, h + 1, mc);
     }
   }
-  canvas.fillRect(0, 84, SCR_W, 19, rgb(20, 10, 44));          // sol
+  canvas.fillRect(0, 84, SCR_W, 19, thc(THEMES[g_theme].ground));          // sol
   for (int i = 0; i < 7; i++) { float f = (float)((i * 16 + (t / 55) % 16)) / 112.0f; int y = 84 + (int)(f * f * 24); if (y < 103) canvas.drawFastHLine(0, y, SCR_W, mixc(rgb(60, 30, 110), acc, 70)); }
   for (int i = -8; i <= 8; i++) canvas.drawLine(SCR_W / 2 + i * 6, 84, SCR_W / 2 + i * 26, 103, mixc(rgb(50, 26, 96), acc, 60));
   canvas.drawFastHLine(0, 84, SCR_W, mixc(rgb(120, 70, 200), acc, 120));
@@ -156,6 +174,7 @@ static void drawMenu() {
   uint32_t t = millis();
   float fs = slide;                                            // couleur d'ambiance : fondu pendant le defilement
   uint16_t acc = mixc(accOf(sel), accOf(sel - (slide > 0 ? 1 : (slide < 0 ? -1 : 0)) + NGAMES), (int)(fabsf(fs) * 200));
+  if (g_theme) acc = thc(THEMES[g_theme].acc);
   drawBackdrop(acc);
   haloRays(SCR_W / 2, 56, acc, t);
   // --- barre du haut
@@ -293,7 +312,7 @@ void setup() {
   g_bright = mp.getInt("bri", 2); if (g_bright < 0 || g_bright > 4) g_bright = 2;
   g_sound = mp.getBool("snd", true);
   g_music = mp.getBool("mus", true);
-  g_lang = mp.getInt("lang", 0) ? 1 : 0;
+  g_lang = mp.getInt("lang", 0) ? 1 : 0; g_theme = mp.getInt("theme", 0); if (g_theme < 0 || g_theme >= themeCount()) g_theme = 0;
   g_sleepIdx = mp.getInt("slp", 1); if (g_sleepIdx < 0 || g_sleepIdx > 4) g_sleepIdx = 1;
   applyBrightness();
   M5.Speaker.setVolume(140);

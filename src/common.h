@@ -9,7 +9,7 @@
 #ifndef SCR_ROT
 #define SCR_ROT 3          // 1 ou 3 : change le sens de l'ecran (donc haut/bas physiques)
 #endif
-#define AD_VERSION "1.3"   // version affichee dans les reglages
+#define AD_VERSION "1.4"   // version affichee dans les reglages
 #define SCR_W   240
 #define SCR_H   135
 
@@ -26,6 +26,9 @@ void sfx(int freq, int ms, bool stopPrev = true);   // son (defini dans main.cpp
 // reglages globaux (definis dans main.cpp, modifies dans settings.cpp)
 extern int  g_bright;       // 0..4
 extern bool g_sound;
+extern int  g_theme;        // theme de couleurs du menu (0 = auto)
+int  themeCount();
+const char* themeName(int i);
 extern bool g_music;         // petites musiques dans les jeux
 extern int  g_lang;           // 0 = English (defaut), 1 = Francais
 static inline const char* L(const char* en, const char* fr) { return g_lang ? fr : en; }
@@ -77,6 +80,13 @@ namespace settings { void begin(); void loop(); void icon(int x, int y); }
 
 // ----------------------------- musiques de fond des jeux (boucles originales)
 // run(id, on) : a appeler a chaque tour de boucle ; on = la partie est en cours
+namespace trophy {
+enum Id { T_DINO, T_FLAP, T_METEORS, T_MAZE, T_BREAKOUT, T_INVADERS, T_SLALOM, T_STACK, T_RACING, T_FLIGHT, T_RIVER, T_FISH, T_TETRIS, T_SNAKE, T_LANDER, T_COUNT };
+void record(int id, uint32_t value);   // fin de partie : medaille bronze / argent / or selon la valeur
+void banner();                         // bandeau "nouvelle medaille" (appele par present())
+void begin(); void loop(); void icon(int x, int y);
+}
+
 namespace bgm { void run(int id, bool on); void stop(); void onSfx(int ms); }
 
 // ----------------------------- inclinaison (IMU) -----------------------------

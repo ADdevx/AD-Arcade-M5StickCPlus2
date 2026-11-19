@@ -61,7 +61,7 @@ static void addChunk(float x, float y, float w, uint16_t col) {
 static void gameOver() {
   state = OVER; endT = 0;
   uint32_t sc = n - 1;
-  if (sc > best) { best = sc; pr.putInt("best", best); }
+  trophy::record(trophy::T_STACK, sc); if (sc > best) { best = sc; pr.putInt("best", best); }
   sfx(300, 120); sfx(120, 320, false);
 }
 

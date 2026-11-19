@@ -61,7 +61,7 @@ void begin() {
 
 static void gameOver() {
   state = OVER; endT = 0;
-  if (score > best) { best = score; pr.putInt("best", best); }
+  trophy::record(trophy::T_SLALOM, score); if (score > best) { best = score; pr.putInt("best", best); }
   sfx(300, 120); sfx(120, 320, false);
 }
 static void crash() {

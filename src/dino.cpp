@@ -207,7 +207,7 @@ static void restartGame() {
 }
 static void crash() {
   state = OVER; gameOverTicks = 0;
-  if (score > hiScore) { hiScore = score; prefs.putInt("hi", hiScore); }
+  trophy::record(trophy::T_DINO, score); if (score > hiScore) { hiScore = score; prefs.putInt("hi", hiScore); }
   sfx(220, 120); sfx(110, 220, false);
 }
 static void updateScore() {

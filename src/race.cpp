@@ -182,7 +182,7 @@ void begin() {
 }
 static void gameOver() {
   state = OVER; endT = 0;
-  if (score > best) { best = score; pr.putInt("best", best); }
+  trophy::record(trophy::T_RACING, score); if (score > best) { best = score; pr.putInt("best", best); }
   sfx(260, 120); sfx(110, 320, false);
 }
 static const float LANE_V[3] = {1.0f, 1.4f, 1.8f};     // chaque voie a sa vitesse : les voitures ne se rattrapent jamais

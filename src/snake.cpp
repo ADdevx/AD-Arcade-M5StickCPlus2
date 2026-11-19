@@ -89,7 +89,7 @@ void begin() {
 static void die(int nx, int ny) {
   state = DYING; deadT = 0; shake = 14;
   hitDx = (float)(nx - sx[0]); hitDy = (float)(ny - sy[0]);
-  if (score > best) { best = score; pr.putInt("best", best); }
+  trophy::record(trophy::T_SNAKE, score); if (score > best) { best = score; pr.putInt("best", best); }
   sfx(330, 80); sfx(220, 120, false); sfx(110, 260, false);
 }
 

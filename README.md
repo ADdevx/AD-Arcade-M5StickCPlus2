@@ -4,7 +4,7 @@
 
 **English** | [Français](#français)
 
-A retro handheld game console firmware for the **M5StickC Plus2**. Boot it, enjoy a 90s style intro, pick a game in an animated menu and play. 15 games, a music player and a settings page, all in one `.bin`.
+A retro handheld game console firmware for the **M5StickC Plus2**. Boot it, enjoy a 90s style intro, pick a game in an animated menu and play. 15 games, medals, a music player and a settings page with themes, all in one `.bin`.
 
 <p align="center"><img src="docs/images/menu.gif" alt="Animated menu" width="480"></p>
 
@@ -24,7 +24,8 @@ Also included: **Chrome Dino, Meteors, Maze, Breakout, Invaders, Slalom, Stack**
 - Quiet chiptune background music in every game (can be turned off)
 - High scores saved for each game
 - Animated menu with battery indicator
-- Settings: brightness, sound, game music, sleep time, sensor calibration, language
+- Trophies (bronze, silver, gold for each game)
+- Settings: theme, brightness, sound, game music, sleep time, sensor calibration, language
 - English and French
 - Version number shown in Settings (top right)
 
@@ -42,14 +43,10 @@ Also included: **Chrome Dino, Meteors, Maze, Breakout, Invaders, Slalom, Stack**
 
 **Easiest:** open [M5Burner](https://burner.m5stack.com/Q5BB26), pick AD Arcade and click Burn.
 
-**Manual:** download `AD-Arcade-M5StickCPlus2-v1.3.bin` from the [Releases](../../releases) page and flash it at address `0x0`:
+**Manual:** download `AD-Arcade-M5StickCPlus2-v1.4.bin` from the [Releases](../../releases) page and flash it at address `0x0`:
 
 ```
-esptool.py --chip esp32 --port COM<your number port> write_flash 0x0 AD-Arcade-M5StickCPlus2-v1.3.bin
-```
-Or
-```
-esptool --chip esp32 --port COM<your number port> write_flash 0x0 AD-Arcade-M5StickCPlus2-v1.3.bin
+esptool.py --chip esp32 --port <your port> write_flash 0x0 AD-Arcade-M5StickCPlus2-v1.4.bin
 ```
 
 ## Build from source
@@ -68,12 +65,13 @@ Found a bug or have an idea for a new mini game? Open an [issue](../../issues). 
 
 ## License
 
-AD Arcade is **free to flash and share, but not open source**. You can flash it on your own devices and share the unmodified firmware with credit and a link to this page. Selling it, publishing modified copies or presenting it as your own work is not allowed. See [LICENSE](LICENSE) for details. Third-party libraries keep their own licenses, and the tunes in the music player are public domain.
+Code under the [MIT license](LICENSE). The tunes in the music player are public domain, and the games and music loops are original.
+
 ---
 
 # Français
 
-Un firmware de console de jeux rétro pour le **M5StickC Plus2**. Tu l'allumes, tu regardes l'intro façon années 90, tu choisis un jeu dans un menu animé et tu joues. 15 jeux, un lecteur de musique et des réglages, dans un seul `.bin`.
+Un firmware de console de jeux rétro pour le **M5StickC Plus2**. Tu l'allumes, tu regardes l'intro façon années 90, tu choisis un jeu dans un menu animé et tu joues. 15 jeux, des médailles, un lecteur de musique et des réglages avec thèmes, dans un seul `.bin`.
 
 ## Jeux
 
@@ -103,7 +101,7 @@ Tetris, Snake, Lunar Lander, Flap Bird, Racing, Flight, Fish, River, Chrome Dino
 
 **Le plus simple :** ouvre [M5Burner](https://burner.m5stack.com/Q5BB26), choisis AD Arcade et clique sur Burn.
 
-**Manuel :** télécharge `AD-Arcade-M5StickCPlus2-v1.3.bin` dans les [Releases](../../releases) et flashe-le à l'adresse `0x0` (commande ci-dessus).
+**Manuel :** télécharge `AD-Arcade-M5StickCPlus2-v1.4.bin` dans les [Releases](../../releases) et flashe-le à l'adresse `0x0` (commande ci-dessus).
 
 ## Retours
 

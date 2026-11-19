@@ -49,7 +49,7 @@ static void spawn() {
 }
 static void gameOver() {
   state = OVER; overT = 0;
-  if (score / 10 > best) { best = score / 10; pr.putInt("best", best); }
+  trophy::record(trophy::T_METEORS, score / 10); if (score / 10 > best) { best = score / 10; pr.putInt("best", best); }
   sfx(300, 120); sfx(120, 300, false);
 }
 

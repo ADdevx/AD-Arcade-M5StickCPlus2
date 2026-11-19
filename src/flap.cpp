@@ -50,7 +50,7 @@ static void puff(float x, float y, int n) {
 }
 static void die() {
   state = OVER; overTicks = 0; shake = 10; flashT = 6;
-  if (score > best) { best = score; pr.putInt("best", best); }
+  trophy::record(trophy::T_FLAP, score); if (score > best) { best = score; pr.putInt("best", best); }
   puff(BIRD_X, by, 10);
   sfx(300, 90); sfx(150, 220, false);
 }
@@ -152,28 +152,54 @@ static void drawPipe(int x, int top, int bottom, bool isCap) {
 
 static void rp(float cx, float cy, float a, float px, float py, int &ox, int &oy) { float c = cosf(a), s = sinf(a); ox = (int)floorf(cx + px * c - py * s + 0.5f); oy = (int)floorf(cy + px * s + py * c + 0.5f); }
 static void drawBird(int cx, int cy, float a, bool alive) {
-  uint16_t body = rgb(252, 214, 50), belly = rgb(255, 244, 190), dk = rgb(110, 62, 10), wing = rgb(240, 150, 30), wingL = rgb(255, 190, 70);
+  // oiseau violet (original) : huppe rose, ventre creme, aile arrondie qui bat, grand oeil brillant
+  const uint16_t OUT = rgb(52, 24, 96), body = rgb(150, 96, 236), bodyD = rgb(112, 64, 196), belly = rgb(255, 238, 214), crest = rgb(255, 110, 170),
+                 wing = rgb(96, 54, 186), wingL = rgb(190, 150, 255), beakU = rgb(255, 190, 40), beakL = rgb(240, 130, 30), cheek = rgb(255, 150, 190);
   int x, y, x2, y2, x3, y3;
-  rp(cx, cy, a, -9, 1, x, y); rp(cx, cy, a, -5, -1, x2, y2); rp(cx, cy, a, -5, 4, x3, y3);        // queue
-  canvas.fillTriangle(x, y - 3, x2, y2, x3, y3, dk); rp(cx, cy, a, -8, 0, x, y); canvas.fillTriangle(x, y - 2, x2, y2, x3, y3 - 1, wing);
-  canvas.fillCircle(cx, cy, BALL_R + 1, dk);
-  canvas.fillCircle(cx, cy, BALL_R, body);
-  rp(cx, cy, a, 1, 3, x, y); canvas.fillEllipse(x, y, 4, 2, belly);                                   // ventre
-  rp(cx, cy, a, -1, -4, x, y); canvas.fillRect(x - 1, y - 1, 2, 1, rgb(255, 245, 140));               // reflet
-  int ex, ey; rp(cx, cy, a, 3, -2, ex, ey);                                                           // oeil
-  canvas.fillCircle(ex, ey, 3, TFT_WHITE);
-  if (alive) { canvas.fillCircle(ex + 1, ey, 1, TFT_BLACK); } else { canvas.drawLine(ex - 1, ey - 1, ex + 1, ey + 1, TFT_BLACK); canvas.drawLine(ex - 1, ey + 1, ex + 1, ey - 1, TFT_BLACK); }
-  rp(cx, cy, a, 5, 0, x, y); rp(cx, cy, a, 12, 2, x2, y2); rp(cx, cy, a, 5, 4, x3, y3);              // bec
-  canvas.fillTriangle(x, y - 1, x2, y2, x3, y3, rgb(242, 108, 30));
-  rp(cx, cy, a, 5, 2, x, y); rp(cx, cy, a, 11, 3, x2, y2); canvas.drawLine(x, y, x2, y2, rgb(150, 50, 10));
-  // aile animee : haute / milieu / basse
+  // queue : trois plumes
+  for (int i = -1; i <= 1; i++) {
+    rp(cx, cy, a, -5, i * 2, x, y); rp(cx, cy, a, -14, i * 4 - 1, x2, y2); rp(cx, cy, a, -12, i * 4 + 2, x3, y3);
+    canvas.fillTriangle(x, y - 1, x2, y2 - 1, x3, y3 + 1, OUT);
+    rp(cx, cy, a, -5, i * 2, x, y); rp(cx, cy, a, -13, i * 4 - 1, x2, y2); rp(cx, cy, a, -11, i * 4 + 1, x3, y3);
+    canvas.fillTriangle(x, y, x2, y2, x3, y3, i == 0 ? crest : bodyD);
+  }
+  // huppe : trois petites plumes
+  for (int i = 0; i < 3; i++) {
+    rp(cx, cy, a, -1 + i * 3, -6, x, y); rp(cx, cy, a, -2 + i * 4, -11 + (i == 1 ? -1 : 0), x2, y2); rp(cx, cy, a, 1 + i * 3, -6, x3, y3);
+    canvas.fillTriangle(x, y, x2, y2, x3, y3, OUT); canvas.drawLine(x2, y2, (x + x3) / 2, (y + y3) / 2, crest);
+  }
+  // corps : deux disques decales pour faire un ovale, avec contour
+  int bx, by_, bx2, by2;
+  rp(cx, cy, a, -2, 0, bx, by_); rp(cx, cy, a, 2, 0, bx2, by2);
+  canvas.fillCircle(bx, by_, 8, OUT); canvas.fillCircle(bx2, by2, 8, OUT);
+  canvas.fillCircle(bx, by_, 7, body); canvas.fillCircle(bx2, by2, 7, body);
+  rp(cx, cy, a, 0, -4, x, y); canvas.fillCircle(x, y, 2, rgb(176, 130, 250));                         // reflet
+  rp(cx, cy, a, 1, 4, x, y); rp(cx, cy, a, -3, 4, x2, y2);
+  canvas.fillCircle(x, y, 4, belly); canvas.fillCircle(x2, y2, 3, belly);                             // ventre
+  rp(cx, cy, a, 6, 2, x, y); canvas.fillCircle(x, y, 2, cheek);                                       // joue
+  // oeil
+  int ex, ey; rp(cx, cy, a, 4, -3, ex, ey);
+  canvas.fillCircle(ex, ey, 4, OUT); canvas.fillCircle(ex, ey, 3, TFT_WHITE);
+  if (alive) { canvas.fillCircle(ex + 1, ey, 2, TFT_BLACK); canvas.drawPixel(ex + 1, ey - 1, TFT_WHITE); }
+  else { canvas.drawLine(ex - 2, ey - 2, ex + 2, ey + 2, TFT_BLACK); canvas.drawLine(ex - 2, ey + 2, ex + 2, ey - 2, TFT_BLACK); }
+  // bec : deux parties
+  rp(cx, cy, a, 8, -1, x, y); rp(cx, cy, a, 15, 1, x2, y2); rp(cx, cy, a, 8, 2, x3, y3);
+  canvas.fillTriangle(x, y - 1, x2 + (x2 > x ? 1 : 0), y2, x3, y3, OUT);
+  rp(cx, cy, a, 8, -1, x, y); rp(cx, cy, a, 14, 1, x2, y2); rp(cx, cy, a, 8, 2, x3, y3);
+  canvas.fillTriangle(x, y, x2, y2, x3, y3, beakU);
+  rp(cx, cy, a, 8, 2, x, y); rp(cx, cy, a, 13, 2, x2, y2); rp(cx, cy, a, 8, 5, x3, y3);
+  canvas.fillTriangle(x, y, x2, y2, x3, y3, beakL);
+  // aile : battement haut / milieu / bas
   int f = wingT > 9 ? 0 : (wingT > 4 ? 1 : (wingT > 0 ? 2 : (((animT / 6) & 1) ? 1 : 2)));
   if (!alive) f = 1;
-  int wy_ = f == 0 ? -6 : (f == 1 ? 1 : 4);
+  int wy_ = f == 0 ? -8 : (f == 1 ? -1 : 6);
   int wx0, wy0, wx1, wy1, wx2, wy2;
-  rp(cx, cy, a, -2, 1, wx0, wy0); rp(cx, cy, a, -8, wy_, wx1, wy1); rp(cx, cy, a, -1, wy_ + 4, wx2, wy2);
-  canvas.fillTriangle(wx0, wy0 - 2, wx1, wy1, wx2, wy2, wing); canvas.fillTriangle(wx0, wy0 - 1, wx1 + 1, wy1 + 1, wx2 - 1, wy2 - 1, wingL);
-  canvas.drawLine(wx0, wy0 - 2, wx1, wy1, dk);
+  rp(cx, cy, a, -1, 1, wx0, wy0); rp(cx, cy, a, -11, wy_, wx1, wy1); rp(cx, cy, a, -6, wy_ + (f == 0 ? 6 : -2) + 6, wx2, wy2);
+  canvas.fillCircle(wx0, wy0, 4, OUT);
+  canvas.fillTriangle(wx0, wy0 - 3, wx1, wy1, wx2, wy2, OUT);
+  canvas.fillCircle(wx0, wy0, 3, wing);
+  canvas.fillTriangle(wx0, wy0 - 2, wx1 + (wx1 < wx0 ? 1 : -1), wy1 + (f == 2 ? -1 : 1), wx2, wy2 - 1, wing);
+  canvas.drawLine(wx0, wy0 - 1, wx1 + 1, wy1, wingL);                                                  // plume claire
 }
 
 static void drawMedal(int x, int y, int m) {

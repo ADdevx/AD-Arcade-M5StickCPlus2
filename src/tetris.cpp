@@ -145,7 +145,7 @@ static int ghostY() { int y = cur.y; while (!collide(cur.t, cur.r, cur.x, y + 1)
 
 static void gameOver() {
   state = OVER; overT = 0;
-  if (score > best) { best = score; pr.putInt("best", best); }
+  trophy::record(trophy::T_TETRIS, score); if (score > best) { best = score; pr.putInt("best", best); }
   sfx(300, 120); sfx(180, 160, false); sfx(90, 320, false);
 }
 

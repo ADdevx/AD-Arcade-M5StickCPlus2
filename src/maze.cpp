@@ -118,7 +118,7 @@ static void step() {
   float gx = (COLS - 1) * CELL + CELL / 2, gy = (ROWS - 1) * CELL + CELL / 2;
   if ((bx - gx) * (bx - gx) + (by - gy) * (by - gy) < 4.5f * 4.5f) {
     state = WIN; winT = 0; sfx(988, 80); sfx(1318, 80, false); sfx(1760, 160, false);
-    if (level + 1 > bestLevel) { bestLevel = level + 1; pr.putInt("lvl", bestLevel); }
+    trophy::record(trophy::T_MAZE, level + 1); if (level + 1 > bestLevel) { bestLevel = level + 1; pr.putInt("lvl", bestLevel); }
   }
 }
 

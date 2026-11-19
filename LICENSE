@@ -1,35 +1,21 @@
-AD Arcade - Copyright (c) 2026 AD. All rights reserved.
+MIT License
 
-AD Arcade (the firmware, its source code, graphics and original music
-loops) is free to use but it is NOT open source. The author keeps all
-rights to it.
+Copyright (c) 2026 AD
 
-YOU MAY:
-- Flash AD Arcade on your own devices, for free.
-- Share the unmodified firmware (.bin) and the official download links
-  with anyone, for free, as long as you credit the author "AD" and link
-  to the original project page.
-- Modify the source code for your own private use, without sharing
-  the result.
-- Show, review or talk about the project (videos, articles, posts).
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-YOU MAY NOT:
-- Sell, rent or charge for AD Arcade, or include it in a product or
-  service that is sold, including preinstalled on devices for sale.
-- Publish or distribute modified versions or copies of the source code
-  under any name.
-- Present AD Arcade, or any part of it, as your own work.
-- Remove or hide the author's name or this notice.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-Other uses, such as a commercial use, a fork, or including it in
-another project, need written permission from the author. Ask by opening
-an issue on this repository.
-
-THIRD-PARTY CODE AND CONTENT
-This project uses the M5Unified and M5GFX libraries (MIT license,
-Copyright M5Stack and contributors), which keep their own license. The
-tunes in the music player are public domain.
-
-NO WARRANTY
-AD Arcade is provided "as is", without warranty of any kind. The author
-is not liable for any damage resulting from its use.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

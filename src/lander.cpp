@@ -101,7 +101,7 @@ static void explode() {
 static void landed(int pad) {
   state = LANDED; stateT = 0; lastPad = pad; ang = 0; vx = vy = 0;
   gain = (100 + (int)fuel * 2) * padM[pad] + level * 20;
-  score += gain; if (score > best) { best = score; pr.putInt("best", best); }
+  score += gain; trophy::record(trophy::T_LANDER, score); if (score > best) { best = score; pr.putInt("best", best); }
   sfx(660, 70); sfx(880, 70, false); sfx(1100, 70, false); sfx(1320, 160, false);
   for (int i = 0; i < 20; i++) spawn(x + (float)rnd(0, 20) - 10, y + 8, (float)((int)rnd(0, 20) - 10) / 10.f, -(float)rnd(5, 22) / 10.f, rnd(25, 45), rgb(255, 230, 100));
 }
@@ -111,7 +111,8 @@ static void step() {
   for (auto &p : parts) if (p.life > 0) { p.x += p.vx; p.y += p.vy; if (p.kind == 1) p.vy += 0.03f; else p.vy += 0.01f; p.life--; }
   if (shake > 0) shake--;
   if (state == TITLE) { camx += 0.35f; return; }
-  if (state == PAUSED || state == OVER) return;
+  if (state == OVER) { stateT++; return; }   // sans ca stateT restait a 0 et A/B ne relancait jamais la partie
+  if (state == PAUSED) return;
   stateT++;
   if (state == READY) { if (stateT > 60) { state = FLY; stateT = 0; } camx += (x + vx * 25 - camx) * 0.08f; x += vx * 0.0f; return; }
   if (state == CRASH) { if (stateT > 90) { if (lives > 0) startRun(); else { state = OVER; stateT = 0; } } return; }
