@@ -41,7 +41,7 @@ Also included: **Chrome Dino, Meteors, Maze, Breakout, Invaders, Slalom, Stack**
 
 ## Install
 
-**Easiest:** open [M5Burner](https://burner.m5stack.com/Q5BB26), pick AD Arcade and click Burn.
+**Easiest:** open [M5Burner](https://burner.m5stack.com/SKKL8X), pick AD Arcade and click Burn.
 
 **Manual:** download `AD-Arcade-M5StickCPlus2-v1.4.bin` from the [Releases](../../releases) page and flash it at address `0x0`:
 
