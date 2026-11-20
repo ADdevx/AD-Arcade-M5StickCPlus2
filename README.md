@@ -99,7 +99,7 @@ Tetris, Snake, Lunar Lander, Flap Bird, Racing, Flight, Fish, River, Chrome Dino
 
 ## Installation
 
-**Le plus simple :** ouvre [M5Burner](https://burner.m5stack.com/Q5BB26), choisis AD Arcade et clique sur Burn.
+**Le plus simple :** ouvre [M5Burner](https://burner.m5stack.com/SKKL8X), choisis AD Arcade et clique sur Burn.
 
 **Manuel :** télécharge `AD-Arcade-M5StickCPlus2-v1.4.bin` dans les [Releases](../../releases) et flashe-le à l'adresse `0x0` (commande ci-dessus).
 
