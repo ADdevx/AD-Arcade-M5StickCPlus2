@@ -68,7 +68,7 @@ static void generate() {
     while (!(cx == 0 && cy == 0)) { onPath[cy][cx] = 1; int d = par[cy][cx]; if (d == 0) cx++; else if (d == 2) cx--; else if (d == 1) cy++; else cy--; }
     onPath[0][0] = 1; }
   nHoles = 0;
-  int want = level - 1; if (want > 7) want = 7;
+  int want = level - 1 + difi(-1, 0, 1); if (want < 0) want = 0; if (want > 7) want = 7;
   for (int tries = 0; nHoles < want && tries < 100; tries++) {
     int cx = rnd(0, COLS - 1), cy = rnd(0, ROWS - 1);
     if (cx + cy < 3 || (cx >= COLS - 2 && cy >= ROWS - 2) || onPath[cy][cx]) continue;
@@ -81,7 +81,7 @@ static void placeBall() { bx = CELL / 2; by = CELL / 2; vx = vy = 0; fallT = 0; 
 static void newLevel() { generate(); placeBall(); levelStart = millis(); elapsed = 0; }
 
 void begin() {
-  pr.begin("maze", false); bestLevel = pr.getInt("lvl", 1);
+  pr.begin(dns("maze"), false); bestLevel = pr.getInt("lvl", 1);
   tilt::load();
   level = 1; state = TITLE; generate(); placeBall(); last = 0; acc = 0; animT = 0;
 }
@@ -136,7 +136,7 @@ static void render() {
   int ix = (int)bx, iy = (int)by; int rad = fallT > 0 ? (int)(BALL_R * fallT / 40.f) : (int)BALL_R;
   if (state != TITLE && rad > 0) {
     canvas.fillCircle(ix + 1, iy + 1, rad, rgb(30, 40, 60));
-    canvas.fillCircle(ix, iy, rad, rgb(220, 60, 50)); if (rad > 2) canvas.fillCircle(ix - 1, iy - 1, 1, rgb(255, 200, 190));
+    canvas.fillCircle(ix, iy, rad, skin::c(0, rgb(220, 60, 50))); if (rad > 2) canvas.fillCircle(ix - 1, iy - 1, 1, skin::c(2, rgb(255, 200, 190)));
   }
   // infos
   char b[48]; snprintf(b, sizeof b, L("LVL %d","NIV %d"), level); txt(b, 4, ROWS * CELL + 2, &fonts::Font0, TFT_WHITE);

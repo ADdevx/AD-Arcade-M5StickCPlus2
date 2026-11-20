@@ -53,7 +53,7 @@ static void emit(float x, float y, int n, uint8_t kind, uint16_t col) {
 static void bubble(float x, float y, int n) { emit(x, y, n, 1, rgb(196, 238, 255)); }
 
 static void reset() {
-  fx = 120; fy = 70; fvx = fvy = 0; ps = psT = 8; face = 1; dirP = 1; lives = 3; level = 1; invul = 0; endT = 0; spawnT = 20; score = 0;
+  fx = 120; fy = 70; fvx = fvy = 0; ps = psT = 8; face = 1; dirP = 1; lives = difi(5, 3, 2); level = 1; invul = 0; endT = 0; spawnT = 20; score = 0;
   mouthT = combo = comboT = shakeT = flashT = 0; graceT = 90;
   for (auto &f : fs) f.on = false;
   for (auto &p : pops) p.t = 0;
@@ -62,7 +62,7 @@ static void reset() {
   for (auto &b : bg) b = {(float)rnd(0, SCR_W), (float)rnd(TOP + 8, FLOOR - 24), (rnd(0, 1) ? 1 : -1) * (0.15f + rnd(0, 10) * 0.02f), (float)rnd(3, 5)};
 }
 void begin() {
-  pr.begin("fish", false); best = pr.getInt("best", 0);
+  pr.begin(dns("fish"), false); best = pr.getInt("best", 0);
   tilt::load();
   reset(); state = TITLE; last = 0; acc = 0;
 }
@@ -80,11 +80,11 @@ static void put(float x, float y, float vx, float s, uint8_t kind, float ph, flo
 }
 static void spawn() {
   int edible = countFish(false), danger = countFish(true);
-  int maxDanger = 2 + level / 2; if (maxDanger > 4) maxDanger = 4;
+  int maxDanger = 2 + level / 2 + difi(-1, 0, 1); if (maxDanger < 1) maxDanger = 1; if (maxDanger > difi(3, 4, 5)) maxDanger = difi(3, 4, 5);
   int pPred = 26 + level * 3; if (pPred > 44) pPred = 44;
   bool pred = state == PLAY && graceT <= 0 && danger < maxDanger && edible >= 2 && (int)rnd(0, 99) < pPred;
   bool left = rnd(0, 1);
-  float lvlK = 1.0f + level * 0.07f;
+  float lvlK = (1.0f + level * 0.07f) * dif(0.9f, 1.0f, 1.12f);
   if (pred) {
     float s = ps * (1.15f + rnd(0, 70) * 0.01f); if (s > 44) s = 44; if (s < 9) s = 9;
     uint8_t kind = rnd(0, 1) ? 6 : 7;
@@ -181,7 +181,8 @@ static void step() {
 
 // --------------------------------------------------------------------------- dessin des poissons
 static void drawFish(float x, float y, float s, float faceV, uint8_t kind, bool danger, float ph, int mouth) {
-  const Sp &sp = SP[kind];
+  Sp spc = SP[kind]; if (kind == 8 && g_skin) { spc.back = skin::c(1, 0); spc.mid = skin::c(0, 0); spc.belly = skin::c(2, 0); spc.fin = skin::c(0, 0); spc.acc = skin::c(3, 0); }
+  const Sp &sp = spc;
   int dir = faceV >= 0 ? 1 : -1; float sq = fabsf(faceV); if (sq < 0.3f) sq = 0.3f;
   int a = (int)(s * sq + 0.5f); if (a < 2) a = 2;
   int b = (int)(s * sp.ratio * 0.01f + 0.5f); if (b < 2) b = 2;

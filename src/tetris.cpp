@@ -115,7 +115,7 @@ static void reset() {
 }
 
 void begin() {
-  pr.begin("tetris", false); best = pr.getInt("best", 0);
+  pr.begin(dns("tetris"), false); best = pr.getInt("best", 0);
   tilt::load(); buildShapes();
   for (auto &b : bgs) b = {(float)rnd(0, SCR_W), (float)rnd(0, SCR_H), rnd(3, 10) / 20.f, (uint8_t)rnd(1, 7)};
   reset(); state = TITLE; last = 0; acc = 0; animT = 0;
@@ -220,7 +220,8 @@ static void step() {
     if (dasT >= 10 && (dasT - 10) % iv == 0 && tryMove(dir, 0)) sfx(900, 8);
   }
   bool sd = ty > 0.45f;
-  if (++gravT >= (sd ? 2 : GRAV[level > 20 ? 19 : level - 1])) {
+  int gf = (int)(GRAV[level > 20 ? 19 : level - 1] * dif(1.4f, 1.0f, 0.72f) + 0.5f); if (gf < 1) gf = 1;
+  if (++gravT >= (sd ? 2 : gf)) {
     gravT = 0;
     if (tryMove(0, 1)) { if (sd) score += 1; }
   }

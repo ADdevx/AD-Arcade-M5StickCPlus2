@@ -62,8 +62,8 @@ static void spawnAt(float z) {
 }
 
 static void reset() {
-  camX = 0; alt = 24; vx = vy = 0; speed = 2.1f; boost = 100; roll = rollV = 0; camZ = 0; spawnAcc = 0; lastRx = 0; lastRy = 24; pitchOff = 0;
-  lives = 3; invul = 0; combo = 0; steps = 0; endT = 0; shakeT = 0; score = 0; bonus = 0; boosting = false; boostLock = false; needRelease = true;
+  camX = 0; alt = 24; vx = vy = 0; speed = 2.1f * dif(0.9f, 1.0f, 1.1f); boost = 100; roll = rollV = 0; camZ = 0; spawnAcc = 0; lastRx = 0; lastRy = 24; pitchOff = 0;
+  lives = difi(5, 3, 2); invul = 0; combo = 0; steps = 0; endT = 0; shakeT = 0; score = 0; bonus = 0; boosting = false; boostLock = false; needRelease = true;
   for (auto &o : objs) o.on = false;
   for (auto &p : pops) p.t = 0;
   for (auto &p : pts) p.life = 0;
@@ -71,7 +71,7 @@ static void reset() {
 }
 void begin() {
   initTables();
-  pr.begin("sky", false); best = pr.getInt("best", 0);
+  pr.begin(dns("sky"), false); best = pr.getInt("best", 0);
   reset(); state = TITLE; last = 0; acc = 0;
 }
 
@@ -122,7 +122,7 @@ static void step() {
   boosting = a && !needRelease && !boostLock && !b;
   if (boosting) { boost -= 1.0f; if ((steps & 7) == 0) sfx(330 + (steps & 15) * 6, 30, false); }
   else if (boost < 100) boost += a ? 0.1f : 0.24f;
-  float base = 2.1f + (steps * 0.0006f > 1.5f ? 1.5f : steps * 0.0006f);
+  float base = (2.1f + (steps * 0.0006f > 1.5f ? 1.5f : steps * 0.0006f)) * dif(0.9f, 1.0f, 1.1f);
   float target = boosting ? base * 1.75f : (b ? base * 0.6f : base);
   speed += (target - speed) * 0.08f;
   camZ += speed; score = (uint32_t)(camZ / 12.0f) + bonus;

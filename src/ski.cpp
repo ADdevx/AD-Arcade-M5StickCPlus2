@@ -47,14 +47,14 @@ static void spawnRow() {
 }
 
 static void reset() {
-  sx = SCR_W / 2; sv = 0; speed = 1.8f; lives = 3; invul = 0; combo = 0; gates = 0; score = 0; bonus = 0; dist = 0; steps = 0; slowT = 0; spawnAcc = 0; nTrk = 0; endT = 0; missT = 0;
+  sx = SCR_W / 2; sv = 0; speed = 1.8f * dif(0.88f, 1.0f, 1.1f); lives = difi(5, 3, 2); invul = 0; combo = 0; gates = 0; score = 0; bonus = 0; dist = 0; steps = 0; slowT = 0; spawnAcc = 0; nTrk = 0; endT = 0; missT = 0;
   for (auto &o : objs) o.on = false;
   for (auto &p : pops) p.t = 0;
   for (int i = 0; i < 14; i++) deco[i] = {(float)((i & 1) ? SCR_W - 4 + (int)rnd(0, 8) : 2 - (int)rnd(0, 8)), (float)(i * 13 + rnd(0, 8)), (uint8_t)rnd(0, 1)};
   for (auto &s : specs) s = {(float)rnd(0, SCR_W), (float)rnd(0, SCR_H)};
 }
 void begin() {
-  pr.begin("ski", false); best = pr.getInt("best", 0);
+  pr.begin(dns("ski"), false); best = pr.getInt("best", 0);
   tilt::load();
   reset(); state = TITLE; last = 0; acc = 0;
 }
@@ -95,7 +95,7 @@ static void step() {
   if (state != PLAY) return;
   // ----- PLAY -----
   steps++;
-  float base = 1.8f + steps * 0.0009f; if (base > 4.3f) base = 4.3f;
+  float dm_ = dif(0.88f, 1.0f, 1.1f); float base = (1.8f + steps * 0.0009f) * dm_; if (base > 4.3f * dm_) base = 4.3f * dm_;
   if (slowT > 0) { slowT--; base = base * 0.6f; }
   speed += (base - speed) * 0.04f;
   dist += speed; score = (uint32_t)(dist / 9.0f) + bonus;

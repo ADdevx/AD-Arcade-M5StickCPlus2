@@ -49,7 +49,7 @@ static void makeSeg(Seg &s) {
   s.ol = rnd(6, 26); s.orr = rnd(6, 26);
 }
 static void reset() {
-  bx = 120; bv = 0; tf = 0; spd = 1.8f; dist = 0; off = 0; spawnAcc = 30; lives = 3; invul = 0; endT = 0; steps = 0; score = 0; bonus = 0; shake = 0; rowN = 0; coins = 0; nRows = 0; corrPrev = -1000;
+  bx = 120; bv = 0; tf = 0; spd = 1.8f * dif(0.9f, 1.0f, 1.1f); dist = 0; off = 0; spawnAcc = 30; lives = difi(5, 3, 2); invul = 0; endT = 0; steps = 0; score = 0; bonus = 0; shake = 0; rowN = 0; coins = 0; nRows = 0; corrPrev = -1000;
   curDir = 0; curW = tgtW = 104; cxPrev = 120;
   for (auto &s : seg) makeSeg(s);
   for (auto &o : objs) o.on = false;
@@ -57,7 +57,7 @@ static void reset() {
   for (auto &p : parts) p.t = 0;
 }
 void begin() {
-  pr.begin("river", false); best = pr.getInt("best", 0);
+  pr.begin(dns("river"), false); best = pr.getInt("best", 0);
   tilt::load();
   reset(); state = TITLE; last = 0; acc = 0;
 }
@@ -140,7 +140,7 @@ static void step() {
   if (bx < l + 8) { bx = l + 8; bv = fabsf(bv) * 0.3f; spd *= 0.995f; if ((animT & 3) == 0) splash(bx - 6, BY, 2); }
   if (bx > r - 8) { bx = r - 8; bv = -fabsf(bv) * 0.3f; spd *= 0.995f; if ((animT & 3) == 0) splash(bx + 6, BY, 2); }
   if (animT % 29 == 7) splash(bx - 12, BY - 2, 2); if (animT % 29 == 21) splash(bx + 12, BY - 2, 2);   // la pagaie plonge
-  float base = 1.8f + steps * 0.0007f; if (base > 3.9f) base = 3.9f;
+  float dm_ = dif(0.9f, 1.0f, 1.1f); float base = (1.8f + steps * 0.0007f) * dm_; if (base > 3.9f * dm_) base = 3.9f * dm_;
   spd += (base - spd) * 0.03f;
   tgtW = 104 - fminf(32.f, steps / 70.f);
   score = (uint32_t)(dist / 10) + bonus;

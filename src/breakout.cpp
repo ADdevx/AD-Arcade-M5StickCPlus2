@@ -36,14 +36,14 @@ static void buildLevel() {
     bricksLeft++;
   }
 }
-static float baseSpeed() { float s = 2.3f + 0.25f * (level - 1) + hits * 0.012f; return s > 4.0f ? 4.0f : s; }
+static float baseSpeed() { float s = 2.3f + 0.25f * (level - 1) + hits * 0.012f; s *= dif(0.88f, 1.0f, 1.12f); return s > 4.0f * dif(0.88f, 1.0f, 1.12f) ? 4.0f * dif(0.88f, 1.0f, 1.12f) : s; }
 static void stick() { stuck = true; bx = padX; by = PAD_Y - BALL_R - 1; vx = vy = 0; }
 static void reset() {
-  lives = 3; level = 1; score = 0; hits = 0; padX = SCR_W / 2; padV = 0; animT = 0; endT = 0;
+  lives = difi(5, 3, 2); level = 1; score = 0; hits = 0; padX = SCR_W / 2; padV = 0; animT = 0; endT = 0;
   buildLevel(); stick();
 }
 void begin() {
-  pr.begin("breakout", false); best = pr.getInt("best", 0);
+  pr.begin(dns("breakout"), false); best = pr.getInt("best", 0);
   tilt::load();
   reset(); state = TITLE; last = 0; acc = 0;
 }
@@ -127,9 +127,9 @@ static void render() {
   }
   // raquette
   int px = (int)(padX - PAD_W / 2);
-  canvas.fillRoundRect(px, PAD_Y, PAD_W, PAD_H, 2, rgb(200, 210, 235)); canvas.fillRect(px + 2, PAD_Y, 6, 2, rgb(240, 80, 70)); canvas.fillRect(px + PAD_W - 8, PAD_Y, 6, 2, rgb(240, 80, 70));
+  canvas.fillRoundRect(px, PAD_Y, PAD_W, PAD_H, 2, skin::c(0, rgb(200, 210, 235))); canvas.fillRect(px + 2, PAD_Y, 6, 2, skin::c(3, rgb(240, 80, 70))); canvas.fillRect(px + PAD_W - 8, PAD_Y, 6, 2, skin::c(3, rgb(240, 80, 70)));
   // balle
-  if (state != TITLE) { canvas.fillCircle((int)bx + 1, (int)by + 1, (int)BALL_R, rgb(40, 40, 70)); canvas.fillCircle((int)bx, (int)by, (int)BALL_R, TFT_WHITE); }
+  if (state != TITLE) { canvas.fillCircle((int)bx + 1, (int)by + 1, (int)BALL_R, rgb(40, 40, 70)); canvas.fillCircle((int)bx, (int)by, (int)BALL_R, g_skin ? skin::c(2, TFT_WHITE) : TFT_WHITE); }
   // HUD
   canvas.fillRect(0, 0, SCR_W, HUD_H, rgb(16, 18, 34)); canvas.drawFastHLine(0, HUD_H, SCR_W, rgb(60, 70, 120));
   char b[24];

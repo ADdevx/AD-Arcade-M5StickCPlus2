@@ -28,7 +28,9 @@ static const Def DEFS[T_COUNT] = {
 };
 
 static int medalOf(int id, int v) { const Def& d = DEFS[id]; return v >= d.g ? 3 : (v >= d.s ? 2 : (v >= d.b ? 1 : 0)); }
-static int stored(int id) { Preferences p; if (!p.begin(DEFS[id].ns, true)) return 0; int v = p.getInt(DEFS[id].key, 0); p.end(); return v; }
+static int stored(int id, int diff) { Preferences p; if (!p.begin(dnsFor(DEFS[id].ns, diff), true)) return 0; int v = p.getInt(DEFS[id].key, 0); p.end(); return v; }
+int medalAt(int id, int diff) { return (id < 0 || id >= T_COUNT) ? 0 : medalOf(id, stored(id, diff)); }
+int total() { int t = 0; for (int i = 0; i < T_COUNT; i++) t += medalAt(i, 1) + medalAt(i, 2); return t; }   // la difficulte "facile" est un mode entrainement : pas de medailles
 
 // ----------------------------------------------------------------------------- dessin d'une medaille
 static void drawMedal(int cx, int cy, int r, int lv) {                 // lv 0 = pas gagnee, 1 bronze, 2 argent, 3 or
@@ -48,7 +50,9 @@ static uint32_t until = 0, since = 0, lastT = 0; static int bMedal = 0, lastId =
 
 void record(int id, uint32_t value) {
   if (id < 0 || id >= T_COUNT) return;
-  int m = medalOf(id, (int)value), pm = medalOf(id, stored(id));
+  if (id != T_MAZE && id != T_LANDER) session::onOver(id, (int)value);     // fin de partie (defi du jour / 2 joueurs)
+  if (g_diff == 0) return;                                                // facile = entrainement, pas de medailles
+  int m = medalOf(id, (int)value), pm = medalOf(id, stored(id, g_diff));
   if (m <= 0) return;
   bool isNew = m > pm; uint32_t now = millis();
   if (!isNew && id == lastId && m == lastM && now - lastT < 30000) return;      // pas de repetition pendant la meme partie
@@ -64,35 +68,37 @@ void banner() {
   if ((int)(until - now) < 260) y = 4 - (260 - (int)(until - now)) * 28 / 260;
   static const char* NEN[3] = {"BRONZE MEDAL", "SILVER MEDAL", "GOLD MEDAL"}; static const char* NFR[3] = {"MEDAILLE BRONZE", "MEDAILLE ARGENT", "MEDAILLE OR"};
   const char* name = (g_lang ? NFR : NEN)[bMedal - 1];
-  int w = 176, x = (SCR_W - w) / 2;
+  int w = 208, x = (SCR_W - w) / 2;
   canvas.fillRoundRect(x, y, w, 24, 8, rgb(10, 8, 26)); canvas.drawRoundRect(x, y, w, 24, 8, bMedal == 3 ? rgb(255, 205, 60) : (bMedal == 2 ? rgb(200, 206, 220) : rgb(205, 127, 50)));
   drawMedal(x + 16, y + 13, 8, bMedal);
   txt(name, x + 30, y + 1, &fonts::Font2, TFT_WHITE, textdatum_t::top_left);
-  if (bNew && (now / 250) % 2 == 0) txt("NEW!", x + w - 6, y + 1, &fonts::Font2, rgb(255, 120, 120), textdatum_t::top_right);
+  if (bNew && (now / 250) % 2 == 0) txt("NEW!", x + w - 8, y + 3, &fonts::Font0, rgb(255, 120, 120), textdatum_t::top_right);
+  if (g_diff == 2) txt(L("HARD", "DIFFICILE"), x + w - 6, y + 15, &fonts::Font0, rgb(255, 150, 90), textdatum_t::top_right);
 }
 
 // ----------------------------------------------------------------------------- ecran "TROPHEES"
 static int page = 0;
-static const int PER = 5, PAGES = (T_COUNT + PER - 1) / PER;
+static const int PER = 5, PPD = (T_COUNT + PER - 1) / PER, PAGES = PPD * 2;     // 3 pages "normal" puis 3 pages "difficile"
 
-void begin() { page = 0; }
+void begin() { page = g_diff == 2 ? PPD : 0; }
 
 static void render() {
   canvas.fillScreen(rgb(14, 16, 34));
   canvas.fillRect(0, 0, SCR_W, 15, rgb(26, 30, 62));
-  int total = 0; for (int i = 0; i < T_COUNT; i++) total += medalOf(i, stored(i));
-  txt(L("TROPHIES", "TROPHEES"), SCR_W / 2, -1, &fonts::Font2, rgb(255, 210, 80), textdatum_t::top_center);
+  int dd = page / PPD + 1, pg = page % PPD;                                          // difficulte affichee : 1 normal, 2 difficile
+  int total = 0; for (int i = 0; i < T_COUNT; i++) total += medalAt(i, dd);
+  txt(dd == 2 ? L("TROPHIES - HARD", "TROPHEES - DIFFICILE") : L("TROPHIES", "TROPHEES"), SCR_W / 2, -1, &fonts::Font2, dd == 2 ? rgb(255, 150, 90) : rgb(255, 210, 80), textdatum_t::top_center);
   char b[24]; snprintf(b, sizeof b, "%d/%d", total, T_COUNT * 3); txt(b, 5, 4, &fonts::Font0, rgb(150, 160, 210), textdatum_t::top_left);
   snprintf(b, sizeof b, "%d/%d", page + 1, PAGES); txt(b, SCR_W - 5, 4, &fonts::Font0, rgb(150, 160, 210), textdatum_t::top_right);
   for (int k = 0; k < PER; k++) {
-    int id = page * PER + k; if (id >= T_COUNT) break;
-    int y = 17 + k * 21, v = stored(id), m = medalOf(id, v);
+    int id = pg * PER + k; if (id >= T_COUNT) break;
+    int y = 17 + k * 21, v = stored(id, dd), m = medalOf(id, v);
     canvas.fillRoundRect(4, y, SCR_W - 8, 19, 5, rgb(22, 26, 54));
     txt((g_lang ? DEFS[id].fr : DEFS[id].en), 10, y + 1, &fonts::Font2, TFT_WHITE, textdatum_t::top_left);
     if (v > 0) { snprintf(b, sizeof b, "%d", v); txt(b, 118, y + 6, &fonts::Font0, rgb(150, 200, 255), textdatum_t::top_left); }
     for (int lv = 1; lv <= 3; lv++) drawMedal(SCR_W - 52 + (lv - 1) * 18, y + 10, 6, m >= lv ? lv : 0);
   }
-  txt(L("A/B: next page   hold PWR: menu", "A/B : page suivante   PWR long : menu"), SCR_W / 2, SCR_H - 8, &fonts::Font0, rgb(110, 118, 165), textdatum_t::top_center);
+  txt(g_diff == 0 ? L("Easy mode = practice, no medals", "Mode facile = entrainement, sans medailles") : L("A/B: next page   hold PWR: menu", "A/B : page suivante   PWR long : menu"), SCR_W / 2, SCR_H - 8, &fonts::Font0, rgb(110, 118, 165), textdatum_t::top_center);
 }
 
 void loop() {

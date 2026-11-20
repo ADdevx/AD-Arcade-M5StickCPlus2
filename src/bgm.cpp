@@ -174,7 +174,10 @@ static void load(int id) {
       while (*p && *p != ' ') p++;
     }
     int dur = (int)(d * beat);
-    if (midi >= 0) notes[nNotes++] = {440.f * powf(2.f, (midi - 69) / 12.f), bmidi >= 0 ? 440.f * powf(2.f, (bmidi - 69) / 12.f) : 0.f, ms, dur};
+    if (midi >= 0) {   // le buzzer piezo est tres faible sous ~450 Hz : on remonte d'une octave
+      float f = 440.f * powf(2.f, (midi - 69) / 12.f); while (f < 440.f) f *= 2.f;
+      notes[nNotes++] = {f, 0.f, ms, dur};   // basse volontairement ignoree (inaudible sur le buzzer)
+    }
     ms += dur;
   }
   totalMs = ms > 0 ? ms : 1;
@@ -185,7 +188,7 @@ void onSfx(int ms) { sfxUntil = millis() + ms + 20; if (curId >= 0) { M5.Speaker
 
 void run(int id, bool on) {
   if (!on || !g_sound || !g_music || id < 0 || id >= NL) { if (curId >= 0) stop(); return; }
-  if (curId != id) { load(id); curId = id; t0 = millis(); cur = -1; M5.Speaker.setChannelVolume(CH, 40); }
+  if (curId != id) { load(id); curId = id; t0 = millis(); cur = -1; M5.Speaker.setChannelVolume(CH, 200); }
   uint32_t now = millis();
   if (now < sfxUntil) return;
   int t = (int)((now - t0) % totalMs), i = -1;

@@ -9,14 +9,18 @@
 #ifndef SCR_ROT
 #define SCR_ROT 3          // 1 ou 3 : change le sens de l'ecran (donc haut/bas physiques)
 #endif
-#define AD_VERSION "1.4"   // version affichee dans les reglages
+#define AD_VERSION "1.5"   // version affichee dans les reglages
 #define SCR_W   240
 #define SCR_H   135
 
 extern M5Canvas canvas;    // tampon plein ecran partage par tous les jeux (cree dans main.cpp)
 
 static inline uint16_t rgb(uint8_t r, uint8_t g, uint8_t b) { return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3); }
-static inline uint32_t rnd(uint32_t a, uint32_t b) { return a + esp_random() % (b - a + 1); }
+// generateur aleatoire : vrai hasard, sauf en "defi du jour" / "2 joueurs" ou une graine commune rend les parties comparables
+extern uint32_t g_rngState; extern bool g_rngSeeded;
+static inline uint32_t rawRand() { if (!g_rngSeeded) return esp_random(); uint32_t x = g_rngState; x ^= x << 13; x ^= x >> 17; x ^= x << 5; g_rngState = x; return x; }
+static inline void seedRand(uint32_t s) { g_rngState = s ? s : 0x9E3779B9u; g_rngSeeded = true; }
+static inline uint32_t rnd(uint32_t a, uint32_t b) { return a + rawRand() % (b - a + 1); }
 static inline float clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
 void present(int ox = 0, int oy = 0);   // envoie le tampon a l'ecran (mis a l'echelle sur les petits ecrans, ex. StickC 160x80)
@@ -30,11 +34,19 @@ extern int  g_theme;        // theme de couleurs du menu (0 = auto)
 int  themeCount();
 const char* themeName(int i);
 extern bool g_music;         // petites musiques dans les jeux
+extern int  g_vol;           // volume 0..5 (0 = muet)
+extern int  g_diff;          // difficulte : 0 facile, 1 normal, 2 difficile
+extern int  g_skin;          // apparence du heros des jeux (debloquee avec les medailles)
+static inline float dif(float easy, float normal, float hard) { return g_diff == 0 ? easy : (g_diff == 2 ? hard : normal); }
+static inline int   difi(int easy, int normal, int hard) { return g_diff == 0 ? easy : (g_diff == 2 ? hard : normal); }
+// espace de noms des records selon la difficulte : "flap" (normal), "flapE" (facile), "flapH" (difficile)
+static inline const char* dnsFor(const char* base, int d) { static char buf[4][20]; static int k = 0; char* o = buf[k = (k + 1) & 3]; snprintf(o, 20, "%s%s", base, d == 0 ? "E" : (d == 2 ? "H" : "")); return o; }
+static inline const char* dns(const char* base) { return dnsFor(base, g_diff); }
 extern int  g_lang;           // 0 = English (defaut), 1 = Francais
 static inline const char* L(const char* en, const char* fr) { return g_lang ? fr : en; }
 extern int  g_sleepIdx;     // 0..4 (30 s, 1 min, 2 min, 5 min, jamais)
 extern bool g_quit;         // un jeu / l'ecran de reglages met true pour revenir au menu
-void applyBrightness();
+void applyBrightness(); void applyVolume();
 void saveSettings();
 
 // melange de 2 couleurs RGB565 (t = 0..256)
@@ -82,10 +94,36 @@ namespace settings { void begin(); void loop(); void icon(int x, int y); }
 // run(id, on) : a appeler a chaque tour de boucle ; on = la partie est en cours
 namespace trophy {
 enum Id { T_DINO, T_FLAP, T_METEORS, T_MAZE, T_BREAKOUT, T_INVADERS, T_SLALOM, T_STACK, T_RACING, T_FLIGHT, T_RIVER, T_FISH, T_TETRIS, T_SNAKE, T_LANDER, T_COUNT };
+int  total();                          // medailles gagnees (normal + difficile)
+int  medalAt(int id, int diff);        // 0..3 : meilleure medaille du jeu a cette difficulte
 void record(int id, uint32_t value);   // fin de partie : medaille bronze / argent / or selon la valeur
 void banner();                         // bandeau "nouvelle medaille" (appele par present())
 void begin(); void loop(); void icon(int x, int y);
 }
+
+// ----------------------------- skins (apparences) : debloques avec les medailles
+namespace skin {
+int  count();                      // nombre d'apparences
+const char* name(int i);
+int  need(int i);                  // nombre de medailles necessaires
+bool unlocked(int i);
+// couleur du heros : 0 corps, 1 ombre, 2 reflet, 3 accent ; renvoie def si l'apparence "Classic" est choisie
+uint16_t c(int slot, uint16_t def);
+}
+
+// ----------------------------- modes speciaux : defi du jour, 2 joueurs, stats
+namespace session {
+void onOver(int gameId, int score);      // appele par chaque jeu a la fin d'une partie
+int  activeGame();                       // jeu en cours dans un mode special (-1 si aucun)
+void end();                              // appele au retour au menu
+bool dateEditing(); void dateBegin(); void dateLoop();   // reglage de la date (reglages + defi du jour)
+void overlay();                          // bandeau dessine par present()
+}
+namespace daily { void begin(); void loop(); void icon(int x, int y); }
+namespace duo   { void begin(); void loop(); void icon(int x, int y); }
+namespace stats { void begin(); void loop(); void icon(int x, int y); void play(int idx); void tick(int idx); void flush(); int total(); }
+// acces aux jeux depuis les modes speciaux (definis dans main.cpp) : indices 0..14 = identifiants trophy::Id
+void gameBegin(int idx); void gameLoop(int idx); const char* gameName(int idx); void gameIcon(int idx, int x, int y);
 
 namespace bgm { void run(int id, bool on); void stop(); void onSfx(int ms); }
 

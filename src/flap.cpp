@@ -35,12 +35,12 @@ static void addPipe(float x) {
   pipes[nPipes - 1].gapY = pipes[nPipes - 1].base;
 }
 static void reset() {
-  by = 60; vy = 0; ang = 0; score = 0; nPipes = 0; animT = 0; overTicks = 0; speed = 1.7f; gapH = 46; shake = 0; flashT = 0;
+  by = 60; vy = 0; ang = 0; score = 0; nPipes = 0; animT = 0; overTicks = 0; speed = 1.7f * dif(0.88f, 1.0f, 1.12f); gapH = difi(54, 46, 40); shake = 0; flashT = 0;
   for (auto &f : fe) f.life = 0;
   addPipe(SCR_W + 40); addPipe(SCR_W + 40 + PIPE_SPACING);
 }
 void begin() {
-  pr.begin("flap", false); best = pr.getInt("best", 0);
+  pr.begin(dns("flap"), false); best = pr.getInt("best", 0);
   state = TITLE; reset(); by = 60; groundX = farX = midX = 0; last = 0; acc = 0;
   for (int i = 0; i < 5; i++) clouds[i] = {(float)(i * 56 + rnd(0, 20)), (int)rnd(8, 56), (uint8_t)rnd(0, 2)};
 }
@@ -86,7 +86,7 @@ static void step() {
     Pipe &p = pipes[i];
     if (!p.scored && p.x + PIPE_W < BIRD_X - BALL_R) {
       p.scored = true; score++; scorePop = 10; sfx(1318, 40); sfx(1760, 60, false);
-      speed = fminf(2.3f, 1.7f + score * 0.012f); gapH = score > 25 ? 42 : 46;
+      speed = fminf(2.3f, 1.7f + score * 0.012f) * dif(0.88f, 1.0f, 1.12f); gapH = difi(54, 46, 40) - (score > 25 ? 4 : 0);
     }
     if (BIRD_X + BALL_R - 1 > p.x && BIRD_X - BALL_R + 1 < p.x + PIPE_W) {
       if (by - BALL_R + 2 < p.gapY - gapH / 2 || by + BALL_R - 2 > p.gapY + gapH / 2) { die(); return; }
@@ -153,8 +153,8 @@ static void drawPipe(int x, int top, int bottom, bool isCap) {
 static void rp(float cx, float cy, float a, float px, float py, int &ox, int &oy) { float c = cosf(a), s = sinf(a); ox = (int)floorf(cx + px * c - py * s + 0.5f); oy = (int)floorf(cy + px * s + py * c + 0.5f); }
 static void drawBird(int cx, int cy, float a, bool alive) {
   // oiseau violet (original) : huppe rose, ventre creme, aile arrondie qui bat, grand oeil brillant
-  const uint16_t OUT = rgb(52, 24, 96), body = rgb(150, 96, 236), bodyD = rgb(112, 64, 196), belly = rgb(255, 238, 214), crest = rgb(255, 110, 170),
-                 wing = rgb(96, 54, 186), wingL = rgb(190, 150, 255), beakU = rgb(255, 190, 40), beakL = rgb(240, 130, 30), cheek = rgb(255, 150, 190);
+  const uint16_t OUT = skin::c(1, rgb(52, 24, 96)), body = skin::c(0, rgb(150, 96, 236)), bodyD = skin::c(1, rgb(112, 64, 196)), belly = rgb(255, 238, 214), crest = skin::c(3, rgb(255, 110, 170)),
+                 wing = skin::c(1, rgb(96, 54, 186)), wingL = skin::c(2, rgb(190, 150, 255)), beakU = rgb(255, 190, 40), beakL = rgb(240, 130, 30), cheek = rgb(255, 150, 190);
   int x, y, x2, y2, x3, y3;
   // queue : trois plumes
   for (int i = -1; i <= 1; i++) {
@@ -173,7 +173,7 @@ static void drawBird(int cx, int cy, float a, bool alive) {
   rp(cx, cy, a, -2, 0, bx, by_); rp(cx, cy, a, 2, 0, bx2, by2);
   canvas.fillCircle(bx, by_, 8, OUT); canvas.fillCircle(bx2, by2, 8, OUT);
   canvas.fillCircle(bx, by_, 7, body); canvas.fillCircle(bx2, by2, 7, body);
-  rp(cx, cy, a, 0, -4, x, y); canvas.fillCircle(x, y, 2, rgb(176, 130, 250));                         // reflet
+  rp(cx, cy, a, 0, -4, x, y); canvas.fillCircle(x, y, 2, skin::c(2, rgb(176, 130, 250)));                         // reflet
   rp(cx, cy, a, 1, 4, x, y); rp(cx, cy, a, -3, 4, x2, y2);
   canvas.fillCircle(x, y, 4, belly); canvas.fillCircle(x2, y2, 3, belly);                             // ventre
   rp(cx, cy, a, 6, 2, x, y); canvas.fillCircle(x, y, 2, cheek);                                       // joue

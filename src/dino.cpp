@@ -192,7 +192,7 @@ static void cloudsUpdate() {
 
 // ----------------------------- CYCLE DE JEU ---------------------------------
 static void resetWorld() {
-  speed = START_SPEED; distanceRan = 0; runningTicks = 0; score = 0; nObs = 0;
+  speed = START_SPEED * dif(0.86f, 1.0f, 1.12f); distanceRan = 0; runningTicks = 0; score = 0; nObs = 0;
   hist[0] = hist[1] = -1; invertTimer = 0; nightTarget = false; achievement = false; flashIter = flashTimer = 0;
   dinoY = GROUND_YPOS; jumpV = 0; jumping = false; ducking = false; speedDrop = false; jumpBuf = 0;
 }
@@ -245,7 +245,7 @@ static void stepPlay() {
   bool hit = hasObs && nObs > 0 && collide(obs[0]);
   if (!hit) {
     distanceRan += speed;
-    if (speed < MAX_SPEED) speed += ACCEL;
+    if (speed < MAX_SPEED * dif(0.86f, 1.0f, 1.12f)) speed += ACCEL * dif(0.8f, 1.0f, 1.25f);
     updateScore();
     if (invertTimer > INVERT_TICKS) { invertTimer = 0; nightTarget = false; }
     else if (invertTimer) invertTimer++;
@@ -368,7 +368,7 @@ static void handleInput() {
 
 // ----------------------------- INTERFACE POUR LE MENU -----------------------
 void begin() {
-  prefs.begin("chromedino", false);
+  prefs.begin(dns("chromedino"), false);
   hiScore = prefs.getInt("hi", 0);
   state = TITLE; resetWorld(); nightF = 0; nightTarget = false;
   nClouds = 0; groundSrc[0] = 0; groundSrc[1] = 420; groundX[0] = 0; groundX[1] = 600;

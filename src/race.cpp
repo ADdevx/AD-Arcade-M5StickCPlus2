@@ -171,13 +171,14 @@ static int hwOf(int kind) { return kind == 4 ? 8 : 7; }
 
 // --------------------------------------------------------------------------- jeu
 static void reset() {
-  px = 120; pv = 0; spd = 2.5f; nitro = 1.0f; dist = 0; off = 0; lives = 3; invul = 0; endT = 0; steps = 0; spawnT = 40; score = 0; bonus = 0; shake = 0;
+  px = 120; pv = 0; spd = 2.5f; nitro = 1.0f; dist = 0; off = 0; lives = difi(5, 3, 2); invul = 0; endT = 0; steps = 0; spawnT = 40; score = 0; bonus = 0; shake = 0;
   for (auto &v : veh) v.on = false;
   for (auto &p : pops) p.t = 0;
   for (int i = 0; i < 14; i++) deco[i] = {(float)((i & 1) ? rnd(196, 232) : rnd(8, 44)), (float)(i * 10), (uint8_t)rnd(0, 2)};
 }
 void begin() {
-  pr.begin("race", false); best = pr.getInt("best", 0); carSel = pr.getInt("car", 0) % 3; colSel = pr.getInt("col", 0) % 7;
+  { Preferences q; if (q.begin("race", true)) { carSel = q.getInt("car", 0) % 3; colSel = q.getInt("col", 0) % 7; q.end(); } }   // voiture et couleur : communes a toutes les difficultes
+  pr.begin(dns("race"), false); best = pr.getInt("best", 0);
   reset(); state = SEL_CAR; last = 0; acc = 0;
 }
 static void gameOver() {
@@ -221,7 +222,7 @@ static void step() {
   steps++;
   float vmax = (2.6f + steps * 0.0007f); if (vmax > 4.3f) vmax = 4.3f;
   vmax *= topM / 1.1f;
-  float target = vmax + (boosting ? 1.5f : 0.0f);
+  float target = (vmax + (boosting ? 1.5f : 0.0f)) * dif(0.9f, 1.0f, 1.1f);
   spd += (target - spd) * 0.04f;
   dist += spd; off += spd;
   score = (uint32_t)(dist / 10) + bonus;
@@ -332,7 +333,7 @@ void loop() {
       break;
     case SEL_COLOR:
       if (b) { colSel = (colSel + 1) % 7; sfx(1200, 20); } else if (p) { colSel = (colSel + 6) % 7; sfx(1000, 20); }
-      else if (a) { pr.putInt("car", carSel); pr.putInt("col", colSel); reset(); state = PLAY; sfx(660, 40); sfx(990, 60, false); }
+      else if (a) { { Preferences q; q.begin("race", false); q.putInt("car", carSel); q.putInt("col", colSel); q.end(); } reset(); state = PLAY; sfx(660, 40); sfx(990, 60, false); }
       break;
     case PLAY: if (p) { state = PAUSED; sfx(440, 50); } break;
     case PAUSED: if (p || a) { state = PLAY; sfx(660, 50); } break;

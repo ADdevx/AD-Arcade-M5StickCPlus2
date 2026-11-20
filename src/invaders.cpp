@@ -48,12 +48,12 @@ static void startWave() {
   bombT = 60; resetShields();
 }
 static void reset() {
-  lives = 3; wave = 1; score = 0; padX = SCR_W / 2; padV = 0; invul = 0; animT = 0; endT = 0;
+  lives = difi(5, 3, 2); wave = 1; score = 0; padX = SCR_W / 2; padV = 0; invul = 0; animT = 0; endT = 0;
   ufoOn = false; ufoT = rnd(700, 1200);
   startWave();
 }
 void begin() {
-  pr.begin("invaders", false); best = pr.getInt("best", 0);
+  pr.begin(dns("invaders"), false); best = pr.getInt("best", 0);
   tilt::load();
   reset(); state = TITLE; last = 0; acc = 0;
 }
@@ -97,7 +97,7 @@ static void eatShields() {            // les envahisseurs qui descendent detruis
   }
 }
 
-static int interval() { int v = 2 + (int)(nAlive * 0.55f) - (wave - 1) * 2; return v < 2 ? 2 : v; }
+static int interval() { int v = 2 + (int)(nAlive * dif(0.75f, 0.55f, 0.45f)) - (wave - 1) * 2; return v < 2 ? 2 : v; }
 static void moveAliens() {
   int minC = ACOLS, maxC = -1, maxR = -1;
   for (int r = 0; r < AROWS; r++) for (int c = 0; c < ACOLS; c++) if (alive[r][c]) { if (c < minC) minC = c; if (c > maxC) maxC = c; if (r > maxR) maxR = r; }
@@ -134,7 +134,7 @@ static void step() {
   // ----- PLAY -----
   if (invul > 0) invul--;
   if (++moveT >= interval()) { moveT = 0; moveAliens(); if (state != PLAY) return; }
-  if (--bombT <= 0) { spawnBomb(); int v = (int)rnd(30, 70) - wave * 4; bombT = v < 14 ? 14 : v; }
+  if (--bombT <= 0) { spawnBomb(); int v = (int)(rnd(30, 70) * dif(1.4f, 1.0f, 0.75f)) - wave * 4; int mn = difi(18, 14, 10); bombT = v < mn ? mn : v; }
   // ovni
   if (ufoOn) {
     ufoX += ufoDir * 1.2f; if ((animT & 7) == 0) sfx(900 + (animT & 8) * 20, 20);
@@ -192,7 +192,7 @@ static void render() {
   if (pb) canvas.fillRect((int)pbx, (int)pby - 2, 2, 6, TFT_WHITE);
   for (auto &b : bombs) if (b.on) { int o = ((int)b.y >> 2) & 1; canvas.fillRect((int)b.x + o, (int)b.y, 2, 3, rgb(255, 230, 80)); canvas.fillRect((int)b.x + 1 - o, (int)b.y + 3, 2, 3, rgb(255, 230, 80)); }
   // canon
-  if (state != OVER && (invul == 0 || (animT & 4))) drawShip((int)padX, SHIP_Y, rgb(90, 255, 120));
+  if (state != OVER && (invul == 0 || (animT & 4))) drawShip((int)padX, SHIP_Y, skin::c(0, rgb(90, 255, 120)));
   // explosions
   for (auto &b : booms) if (b.t > 0) {
     int k = 12 - b.t; int x = (int)b.x, y = (int)b.y;
@@ -204,7 +204,7 @@ static void render() {
   char b[32];
   snprintf(b, sizeof b, "%lu", (unsigned long)score); txt(b, 5, 0, &fonts::Font2, TFT_WHITE);
   snprintf(b, sizeof b, L("WAVE %d","VAGUE %d"), wave); txt(b, SCR_W / 2, 0, &fonts::Font2, rgb(255, 210, 80), textdatum_t::top_center);
-  for (int i = 0; i < lives - (state == OVER ? 0 : 1); i++) drawShip(SCR_W - 14 - i * 20, 4, rgb(90, 255, 120));
+  for (int i = 0; i < lives - (state == OVER ? 0 : 1); i++) drawShip(SCR_W - 14 - i * 20, 4, skin::c(0, rgb(90, 255, 120)));
   if (state == TITLE) {
     canvas.fillRect(0, HUD_H + 1, SCR_W, SCR_H, rgb(2, 3, 12));
     for (int t = 0; t < 3; t++) drawSpr(SPR[t][(animT / 25) & 1], 62 + t * 46, 24, TYPECOL[t]);

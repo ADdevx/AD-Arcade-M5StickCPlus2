@@ -68,9 +68,9 @@ static int padAt(float wx) {                      // numero de zone sous wx (ou 
 // ----------------------------------------------------------------------------- partie
 static void levelParams() {
   int d = level - 1; if (d > 8) d = 8;
-  grav = 0.0100f + 0.0007f * d;
+  grav = (0.0100f + 0.0007f * d) * dif(0.85f, 1.0f, 1.15f);
   thrustPow = 0.026f;
-  fuel0 = 135 - 8 * d; if (fuel0 < 72) fuel0 = 72;
+  fuel0 = (135 - 8 * d); if (fuel0 < 72) fuel0 = 72; fuel0 *= dif(1.25f, 1.0f, 0.85f);
   startVx = 0.30f + 0.07f * d;
 }
 static void startRun() {                          // (re)pose le module en haut du terrain
@@ -80,10 +80,10 @@ static void startRun() {                          // (re)pose le module en haut 
   for (auto &p : parts) p.life = 0;
   state = READY;
 }
-static void newGame() { level = 1; lives = 3; score = 0; genTerrain(); startRun(); }
+static void newGame() { level = 1; lives = difi(5, 3, 2); score = 0; genTerrain(); startRun(); }
 
 void begin() {
-  pr.begin("lander", false); best = pr.getInt("best", 0);
+  pr.begin(dns("lander"), false); best = pr.getInt("best", 0);
   tilt::load();
   level = 1; genTerrain(); levelParams();
   x = 0; y = 40; vx = 0.3f; vy = 0; ang = 0; camx = 0; fuel = 100;
@@ -115,7 +115,7 @@ static void step() {
   if (state == PAUSED) return;
   stateT++;
   if (state == READY) { if (stateT > 60) { state = FLY; stateT = 0; } camx += (x + vx * 25 - camx) * 0.08f; x += vx * 0.0f; return; }
-  if (state == CRASH) { if (stateT > 90) { if (lives > 0) startRun(); else { state = OVER; stateT = 0; } } return; }
+  if (state == CRASH) { if (stateT > 90) { if (lives > 0) startRun(); else { state = OVER; stateT = 0; session::onOver(trophy::T_LANDER, score); } } return; }
   if (state == LANDED) return;
 
   // ----- vol
@@ -246,10 +246,10 @@ static void drawShip(float sx_, float sy_, float a, bool flame, int ft) {
   seg(sx_, sy_, a, -11, 9, -6, 9, LEG); seg(sx_, sy_, a, 6, 9, 11, 9, LEG);        // pieds
   seg(sx_, sy_, a, -6, 5, -3, 9, LEGD); seg(sx_, sy_, a, 6, 5, 3, 9, LEGD);
   tri(sx_, sy_, a, -2, 6, 2, 6, 3, 10, rgb(90, 90, 104)); tri(sx_, sy_, a, -2, 6, 2, 6, -3, 10, rgb(90, 90, 104));   // tuyere
-  tri(sx_, sy_, a, -6, 2, 6, 2, 5, 7, rgb(180, 140, 50)); tri(sx_, sy_, a, -6, 2, 5, 7, -5, 7, rgb(160, 122, 40));    // etage de descente
+  tri(sx_, sy_, a, -6, 2, 6, 2, 5, 7, skin::c(0, rgb(180, 140, 50))); tri(sx_, sy_, a, -6, 2, 5, 7, -5, 7, skin::c(1, rgb(160, 122, 40)));    // etage de descente
   int cx_, cy_; rotPt(sx_, sy_, a, 0, -2, cx_, cy_);
-  canvas.fillCircle(cx_, cy_, 6, rgb(150, 150, 164));                        // cabine
-  canvas.fillCircle(cx_, cy_, 5, rgb(214, 214, 226));
+  canvas.fillCircle(cx_, cy_, 6, skin::c(1, rgb(150, 150, 164)));                        // cabine
+  canvas.fillCircle(cx_, cy_, 5, skin::c(2, rgb(214, 214, 226)));
   int wx, wy; rotPt(sx_, sy_, a, 1.5f, -3, wx, wy);
   canvas.fillCircle(wx, wy, 2, rgb(30, 70, 150)); canvas.drawPixel(wx - 1, wy - 1, rgb(190, 230, 255));
   int ax_, ay_; rotPt(sx_, sy_, a, 0, -8.5f, ax_, ay_); int bx, by; rotPt(sx_, sy_, a, 0, -6, bx, by); canvas.drawLine(ax_, ay_, bx, by, LEG); canvas.drawPixel(ax_, ay_, rgb(255, 80, 80));

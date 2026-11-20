@@ -40,7 +40,7 @@ static void newBlock() {
   bool fromLeft = (n & 1) == 0;
   mx = fromLeft ? 0 : SCR_W - mw; mdir = fromLeft ? 1 : -1;
 }
-static float spd() { float v = 1.7f + n * 0.05f; return v > 5.0f ? 5.0f : v; }
+static float spd() { float m = dif(0.8f, 1.0f, 1.2f); float v = (1.7f + n * 0.05f) * m; return v > 5.0f * m ? 5.0f * m : v; }
 
 static void reset() {
   n = 1; LY[0] = {(SCR_W - START_W) / 2.f, (float)START_W, hueOf(0)};
@@ -49,7 +49,7 @@ static void reset() {
   newBlock();
 }
 void begin() {
-  pr.begin("stack", false); best = pr.getInt("best", 0);
+  pr.begin(dns("stack"), false); best = pr.getInt("best", 0);
   for (auto &s : stars) s = {(uint8_t)rnd(0, SCR_W - 1), (uint8_t)rnd(0, SCR_H - 1), (uint8_t)rnd(80, 200)};
   reset(); state = TITLE; last = 0; acc = 0;
 }

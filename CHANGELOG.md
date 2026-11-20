@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.5
+- New **Daily Challenge**: one game and one seed per day (from the built-in clock), 3 tries, best score of the day, day streak and a 7-day history
+- New **1-2 Players** mode: play solo to beat your best, or pass the M5 around (same start for both, 1 round or best of 3)
+- New **Stats** screen: total play time, games played, favourite game, medals, streak
+- New **Difficulty** setting (Easy, Normal, Hard). Easy is practice (no medals), Hard has its own records and medals
+- New **Skins** for the hero of Flap Bird, Snake, Meteors, Invaders, Lunar Lander, Breakout, Fish and Maze, unlocked with medals
+- New **Volume** setting with 5 levels
+- New **Date** setting (used by the Daily Challenge)
+- Louder in-game music
+
 ## v1.4
 - Redrawn **Flap Bird** character (new purple bird with crest, tail and animated wing)
 - **New music**: original chiptune tunes with melody and bass for all 15 games

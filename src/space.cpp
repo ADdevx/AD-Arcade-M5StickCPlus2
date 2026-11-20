@@ -27,12 +27,12 @@ static void spark(float x, float y, int n) {
   for (int i = 0; i < n; i++) for (auto &s : sparks) if (s.life <= 0) { float a = rnd(0, 628) / 100.f, v = rnd(5, 25) / 10.f; s = {x, y, cosf(a) * v, sinf(a) * v, (int)rnd(10, 26)}; break; }
 }
 static void reset() {
-  shipX = SCR_W / 2; shipV = 0; lives = 3; invul = 0; score = 0; speedMul = 1.0f; spawnT = 30; animT = 0; overT = 0;
+  shipX = SCR_W / 2; shipV = 0; lives = difi(5, 3, 2); invul = 0; score = 0; speedMul = dif(0.8f, 1.0f, 1.25f); spawnT = 30; animT = 0; overT = 0;
   for (auto &m : mets) m.on = false;
   for (auto &s : sparks) s.life = 0;
 }
 void begin() {
-  pr.begin("space", false); best = pr.getInt("best", 0);
+  pr.begin(dns("space"), false); best = pr.getInt("best", 0);
   tilt::load();
   for (auto &s : stars) s = {(float)rnd(0, SCR_W), (float)rnd(0, SCR_H), rnd(4, 20) / 10.f};
   reset(); state = TITLE; last = 0; acc = 0;
@@ -66,7 +66,7 @@ static void step() {
   shipX += shipV; shipX = clampf(shipX, 9, SCR_W - 9);
   // PLAY
   score++;
-  speedMul = 1.0f + score / 1500.f; if (speedMul > 2.6f) speedMul = 2.6f;
+  speedMul = dif(0.8f, 1.0f, 1.25f) + score / 1500.f; if (speedMul > 2.6f) speedMul = 2.6f;
   if (--spawnT <= 0) { spawn(); spawnT = (int)(rnd(18, 42) / (0.6f + speedMul * 0.4f)); if (spawnT < 6) spawnT = 6; }
   if (invul > 0) invul--;
   for (auto &m : mets) if (m.on) {
@@ -93,7 +93,7 @@ static void drawMeteor(const Met &m) {
 }
 static void drawShip(int x, int y, float bank, bool flame) {
   int w = 9 + (int)(bank * 0), sh = (int)(bank * 2);
-  uint16_t body = rgb(210, 220, 235), dk = rgb(90, 100, 130), red = rgb(230, 60, 50);
+  uint16_t body = skin::c(0, rgb(210, 220, 235)), dk = skin::c(1, rgb(90, 100, 130)), red = skin::c(3, rgb(230, 60, 50));
   if (flame) { int f = 4 + (animT & 3) * 2; canvas.fillTriangle(x - 3, y + 6, x + 3, y + 6, x, y + 8 + f, rgb(255, 170, 40)); canvas.fillTriangle(x - 1, y + 6, x + 1, y + 6, x, y + 6 + f / 2, rgb(255, 240, 150)); }
   canvas.fillTriangle(x - w, y + 7, x, y - 2, x + w, y + 7, dk);                                       // ailes
   canvas.fillTriangle(x - 3 + sh, y + 8, x + sh, y - 11, x + 3 + sh, y + 8, body);                    // fuselage
@@ -112,7 +112,7 @@ static void render() {
   if (state == PLAY || state == PAUSED || state == READY) {
     char b[16]; snprintf(b, sizeof b, "%lu", (unsigned long)(score / 10));
     txt(b, 6, 4, &fonts::Font2, TFT_WHITE);
-    for (int i = 0; i < lives; i++) { int hx = SCR_W - 14 - i * 14; canvas.fillTriangle(hx - 4, hx * 0 + 14, hx, 4, hx + 4, 14, rgb(210, 220, 235)); }
+    for (int i = 0; i < lives; i++) { int hx = SCR_W - 14 - i * 14; canvas.fillTriangle(hx - 4, hx * 0 + 14, hx, 4, hx + 4, 14, skin::c(0, rgb(210, 220, 235))); }
   }
   if (state == TITLE) {
     txtO(L("METEORS","METEORES"), SCR_W / 2, 10, &fonts::Font4, rgb(255, 200, 60), rgb(90, 30, 0), textdatum_t::top_center);

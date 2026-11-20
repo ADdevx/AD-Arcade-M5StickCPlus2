@@ -77,11 +77,11 @@ static void reset() {
   for (int i = 0; i < n; i++) { sx[i] = 8 - i; sy[i] = GH / 2; px_[i] = sx[i]; py_[i] = sy[i]; }
   nrocks = 0; gx = gy = -1; gT = 0; ax = ay = -1;
   for (auto &p : parts) p.life = 0;
-  interval = 9;
+  interval = dif(11.0f, 9.0f, 7.2f);
   newApple();
 }
 void begin() {
-  pr.begin("snake", false); best = pr.getInt("best", 0);
+  pr.begin(dns("snake"), false); best = pr.getInt("best", 0);
   tilt::load();
   reset(); state = TITLE; last = 0; acc = 0; animT = 0;
 }
@@ -115,7 +115,7 @@ static void tick() {
       newApple();
       if (eaten % 4 == 3 && gx < 0) { if (pickFree(gx, gy)) gT = GOLD_TIME; }
       int nl = eaten / 5 + 1;
-      if (nl > level) { level = nl; interval = fmaxf(4.0f, 9.0f - 0.7f * (level - 1)); if (level >= 2) { addRock(); addRock(); } sfx(660, 50); sfx(990, 80, false); }
+      if (nl > level) { level = nl; interval = fmaxf(dif(5.0f, 4.0f, 3.2f), dif(11.0f, 9.0f, 7.2f) - 0.7f * (level - 1)); if (level >= 2) { addRock(); addRock(); } sfx(660, 50); sfx(990, 80, false); }
     }
     if (score > best) best = score;
   }
@@ -157,8 +157,8 @@ static float radAt(float idx, int cnt, float bg) {
 
 // px,py : positions ecran (centres), 0 = tete. hdx,hdy : direction de la tete (unitaire)
 static void drawBody(const float* px, const float* py, int cnt, float hdx, float hdy, float bg, bool dead, bool blink, int anim, int tongue) {
-  uint16_t OUT = rgb(10, 52, 26);
-  uint16_t A = dead ? rgb(150, 150, 128) : rgb(70, 198, 86), B = dead ? rgb(124, 124, 108) : rgb(44, 160, 70), HL = dead ? rgb(190, 190, 170) : rgb(158, 240, 142);
+  uint16_t OUT = g_skin ? mixc(skin::c(1, 0), 0, 140) : rgb(10, 52, 26);
+  uint16_t A = dead ? rgb(150, 150, 128) : skin::c(0, rgb(70, 198, 86)), B = dead ? rgb(124, 124, 108) : skin::c(1, rgb(44, 160, 70)), HL = dead ? rgb(190, 190, 170) : skin::c(2, rgb(158, 240, 142));
   if (blink) { A = rgb(230, 60, 50); B = rgb(190, 40, 40); HL = rgb(255, 150, 120); }
   for (int pass = 0; pass < 2; pass++) {
     for (int i = cnt - 1; i >= 1; i--) for (int s = 0; s < 3; s++) {
@@ -181,7 +181,7 @@ static void drawBody(const float* px, const float* py, int cnt, float hdx, float
   // tete
   int hx = (int)(px[0] + 0.5f), hy = (int)(py[0] + 0.5f);
   float nx = hdx, ny = hdy, perx = -hdy, pery = hdx;
-  uint16_t HC = dead ? rgb(170, 170, 148) : rgb(92, 218, 104);
+  uint16_t HC = dead ? rgb(170, 170, 148) : (g_skin ? mixc(skin::c(0, 0), TFT_WHITE, 50) : rgb(92, 218, 104));
   if (blink) HC = rgb(240, 80, 70);
   canvas.fillCircle(hx, hy, 6, OUT);
   canvas.fillCircle((int)(hx + nx * 2), (int)(hy + ny * 2), 5, OUT);

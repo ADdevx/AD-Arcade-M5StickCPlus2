@@ -1,21 +1,27 @@
-MIT License
+AD Arcade License
+Copyright (c) 2026 ADdev (https://github.com/ADdevx)
 
-Copyright (c) 2026 AD
+AD Arcade is free to use, but it is NOT open source.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+You are allowed to:
+- Download, flash and use the firmware on your own devices, for free.
+- Share the unmodified firmware (the original .bin file or this repository)
+  with other people, for free, as long as you give clear credit to ADdev and
+  link to the original project:
+  https://github.com/ADdevx/AD-Arcade-M5StickCPlus2
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+You are NOT allowed to:
+- Sell the firmware or the source code, or include them in anything sold.
+- Publish modified copies or derivative versions of the firmware or the source
+  code, except for the ports described below.
+- Claim the firmware, the source code or any part of them as your own work.
+- Remove or hide the credit to ADdev.
+
+Ports to other devices:
+Ports of AD Arcade to other devices are allowed as long as they keep a clear
+credit to ADdev with a link to the original project, are not sold, and are not
+presented as the author's own work. All other terms of this license still apply.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+IMPLIED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY ARISING FROM THE USE OF THE SOFTWARE.
