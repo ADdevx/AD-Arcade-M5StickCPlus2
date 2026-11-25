@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.8.2
+- Buttons mode is now only offered in **Tetris** and **Snake** (the other games are better with tilt).
+- Tetris with buttons: B = left, A = right, **PWR = rotate** (no pause in this mode), hold A+B = hard drop. A+B no longer rotates, so pieces are not dropped by accident.
+
 ## v1.8.1
 - **Tilt or buttons**: Meteors, Breakout, Invaders, Slalom, Racing, River, Tetris, Snake and Lunar Lander can now be played with the buttons. A screen asks before the game (your choice is remembered), or pick it once in Settings > Controls (Ask / Tilt / Buttons). Buttons: B = left, A = right (Racing: A+B = nitro, Invaders: auto fire, Tetris: A+B = rotate, hold A+B = drop, Snake: A/B = turn, Lander: A/B = rotate, A+B = thrust).
 - **Screen rotation**: Settings > Screen (Normal / Flipped 180 degrees); tilt follows the screen.

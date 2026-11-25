@@ -211,10 +211,10 @@ static void step() {
 
   tilt::update();
   float tx = tilt::x(), ty = tilt::y();
-  if (g_btnCtrl) {                                   // boutons : B gauche, A droite, A+B tourner, A+B tenus = chute
+  if (g_btnCtrl) {                                   // boutons : B gauche, A droite, PWR tourner, A+B tenus = chute
     static int bothT = 0;
     bool ba = M5.BtnA.isPressed(), bb = M5.BtnB.isPressed();
-    if (ba && bb) { if (bothT == 0 && rotate()) sfx(1100, 12); if (++bothT == 22) { hardDrop(); return; } tx = 0; }
+    if (ba && bb) { if (++bothT == 18) { hardDrop(); return; } tx = 0; }          // A+B maintenus = chute (la rotation est sur PWR)
     else { bothT = 0; tx = ba ? 1.0f : (bb ? -1.0f : 0.f); }
     ty = 0;
   }
@@ -375,7 +375,10 @@ void loop() {
   bool a = M5.BtnA.wasPressed(), bb = M5.BtnB.wasPressed(), p = M5.BtnPWR.wasPressed();
   switch (state) {
     case TITLE: if (a || bb) { reset(); state = PLAY; sfx(660, 40); } break;
-    case PLAY: if (p) { state = PAUSED; sfx(440, 50); } else if (!g_btnCtrl) { if (a && rotate()) sfx(1100, 12); if (bb) hardDrop(); } break;
+    case PLAY:
+      if (g_btnCtrl) { if (p && rotate()) sfx(1100, 12); }                   // mode boutons : PWR = tourner (pas de pause)
+      else if (p) { state = PAUSED; sfx(440, 50); } else { if (a && rotate()) sfx(1100, 12); if (bb) hardDrop(); }
+      break;
     case PAUSED: if (p || a || bb) { state = PLAY; sfx(660, 50); } break;
     case CLEAR: break;
     case OVER: if ((a || bb) && overT > 70) { reset(); state = PLAY; sfx(660, 40); } break;
