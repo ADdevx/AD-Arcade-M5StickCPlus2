@@ -78,13 +78,15 @@ bool adapt() {
   return true;
 }
 
-float x() { if (virt()) return vx; return ok ? clampf(sgX * (filt[axX] - zeroV[axX]) / SCALE, -1.f, 1.f) : 0.f; }
+static float xRaw() { return ok ? clampf(sgX * (filt[axX] - zeroV[axX]) / SCALE, -1.f, 1.f) : 0.f; }
+float x() { if (virt()) return vx; return g_flip ? -xRaw() : xRaw(); }   // ecran retourne : gauche/droite inverses
 // y() s'adapte a la facon dont on tient le M5 au moment de la stabilisation :
 //  - a plat (ecran vers le haut) : le haut de l'ecran qui descend = + (axe Y de l'accelerometre)
 //  - debout / en paysage (comme une Game Boy) : on pousse le haut de l'ecran vers l'avant = + (axe perpendiculaire a l'ecran)
 //  - entre les deux (tenu en biais) : melange continu. Dans tous les cas, gauche/droite = pencher le cote droit vers le bas.
-float y() {
-  if (virt()) return vy;
+static float yRaw();
+float y() { if (virt()) return vy; return g_flip ? -yRaw() : yRaw(); }
+static float yRaw() {
   if (!ok) return 0.f;
   int axZ = 3 - axX - axY;
   float u0 = sgY * zeroV[axY], w0 = sgZ * zeroV[axZ];
@@ -136,9 +138,9 @@ void calibrationStep() {
         int best = -1; float bv = 0;
         for (int k = 0; k < 3; k++) { if (step == 2 && k == axX) continue; if (fabsf(d[k]) > bv) { bv = fabsf(d[k]); best = k; } }
         if (best < 0 || bv < 0.20f) { warn = L("not enough tilt, try again","pas assez incline, recommence"); sfx(200, 150); }
-        else if (step == 1) { axX = best; sgX = d[best] > 0 ? 1.f : -1.f; step = 2; sfx(880, 60); }
+        else if (step == 1) { axX = best; sgX = (d[best] > 0 ? 1.f : -1.f) * (g_flip ? -1.f : 1.f); step = 2; sfx(880, 60); }
         else {
-          axY = best; sgY = d[best] > 0 ? 1.f : -1.f;
+          axY = best; sgY = (d[best] > 0 ? 1.f : -1.f) * (g_flip ? -1.f : 1.f);
           for (int k = 0; k < 3; k++) zeroV[k] = base[k];
           pr.putBool("ok", true); pr.putInt("ax", axX); pr.putInt("ay", axY); sgZ = base[3 - axX - axY] >= 0 ? 1.f : -1.f; pr.putInt("sz", (int)sgZ);
           pr.putInt("sx", (int)sgX); pr.putInt("sy", (int)sgY);

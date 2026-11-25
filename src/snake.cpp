@@ -135,7 +135,7 @@ static void step() {
   tilt::update();
   float tx = tilt::x(), ty = -tilt::y();
   float mx = fabsf(tx), my = fabsf(ty); int want = -1;
-  if (mx > 0.35f || my > 0.35f) want = mx >= my ? (tx > 0 ? 0 : 2) : (ty > 0 ? 1 : 3);
+  if (!g_btnCtrl && (mx > 0.35f || my > 0.35f)) want = mx >= my ? (tx > 0 ? 0 : 2) : (ty > 0 ? 1 : 3);   // mode boutons : seulement A / B
   if (want >= 0 && want != lastWant) {
     int basis = qn > 0 ? q[qn - 1] : dir;
     if (want != basis && want != ((basis + 2) & 3) && qn < 2) q[qn++] = want;

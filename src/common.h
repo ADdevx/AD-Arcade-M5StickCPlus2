@@ -9,7 +9,7 @@
 #ifndef SCR_ROT
 #define SCR_ROT 3          // 1 ou 3 : change le sens de l'ecran (donc haut/bas physiques)
 #endif
-#define AD_VERSION "1.8.0"   // version affichee dans les reglages
+#define AD_VERSION "1.8.1"   // version affichee dans les reglages
 #define SCR_W   240
 #define SCR_H   135
 
@@ -66,6 +66,17 @@ static inline int   difi(int easy, int normal, int hard) { return g_diff == 0 ? 
 // espace de noms des records selon la difficulte : "flap" (normal), "flapE" (facile), "flapH" (difficile)
 static inline const char* dnsFor(const char* base, int d) { static char buf[4][20]; static int k = 0; char* o = buf[k = (k + 1) & 3]; snprintf(o, 20, "%s%s", base, d == 0 ? "E" : (d == 2 ? "H" : "")); return o; }
 static inline const char* dns(const char* base) { return dnsFor(base, g_diff); }
+// commandes : g_ctrl = reglage (0 = demander avant la partie, 1 = inclinaison, 2 = boutons) ; g_btnCtrl = le jeu en cours se joue aux boutons
+extern int  g_ctrl; extern bool g_btnCtrl;
+extern bool g_flip;           // ecran retourne de 180 deg (reglage "Screen")
+void applyRotation();
+namespace ctrl {
+bool supports(int gameIdx);   // le jeu a un mode boutons ?
+void prepare(int gameIdx);    // fixe g_btnCtrl pour ce jeu (reglage + dernier choix)
+int  remembered(int gameIdx); void remember(int gameIdx, bool buttons);
+const char* hint(int gameIdx);
+float x();                    // gauche/droite : inclinaison, ou en mode boutons B maintenu = gauche, A maintenu = droite
+}
 extern int  g_lang;           // 0 = English (defaut), 1 = Francais
 static inline const char* L(const char* en, const char* fr) { return g_lang ? fr : en; }
 extern int  g_sleepIdx;     // 0..4 (30 s, 1 min, 2 min, 5 min, jamais)
@@ -144,7 +155,7 @@ namespace settings { void begin(); void loop(); void icon(int x, int y); }
 // ----------------------------- musiques de fond des jeux (boucles originales)
 // run(id, on) : a appeler a chaque tour de boucle ; on = la partie est en cours
 namespace trophy {
-enum Id { T_DINO, T_FLAP, T_METEORS, T_MAZE, T_BREAKOUT, T_INVADERS, T_SLALOM, T_STACK, T_RACING, T_FLIGHT, T_RIVER, T_FISH, T_TETRIS, T_SNAKE, T_LANDER, T_COUNT };
+enum Id { T_DINO, T_FLAP, T_METEORS, T_MAZE, T_BREAKOUT, T_INVADERS, T_SLALOM, T_STACK, T_RACING, T_FLIGHT, T_RIVER, T_FISH, T_TETRIS, T_SNAKE, T_LANDER, T_EMBER, T_COUNT };   // T_EMBER = Emberwood (index 15 du menu)
 int  total();                          // medailles gagnees (normal + difficile)
 int  medalAt(int id, int diff);        // 0..3 : meilleure medaille du jeu a cette difficulte
 void record(int id, uint32_t value);   // fin de partie : medaille bronze / argent / or selon la valeur

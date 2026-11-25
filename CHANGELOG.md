@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.8.1
+- **Tilt or buttons**: Meteors, Breakout, Invaders, Slalom, Racing, River, Tetris, Snake and Lunar Lander can now be played with the buttons. A screen asks before the game (your choice is remembered), or pick it once in Settings > Controls (Ask / Tilt / Buttons). Buttons: B = left, A = right (Racing: A+B = nitro, Invaders: auto fire, Tetris: A+B = rotate, hold A+B = drop, Snake: A/B = turn, Lander: A/B = rotate, A+B = thrust).
+- **Screen rotation**: Settings > Screen (Normal / Flipped 180 degrees); tilt follows the screen.
+- **Emberwood**: original background music (village & forest, crypt, boss), medals (bronze for beating the Ember Golem, silver and gold for fast runs) and a final score; it now appears in Trophies and Stats.
+- **Emberwood fixes**: you could get stuck in a tree when entering the forest clearing, and then not leave the village to the right; the river boulder no longer blocks the path.
+- **Cardputer / Cardputer-ADV**: screen was rotated 90 degrees (now landscape), Enter/Space now work as A (the language screen could not be validated), Ctrl also works as B. Thanks to the Reddit tester!
+
 ## v1.8.0 (beta: played on the StickC Plus2; StickC Plus, StickS3 and Cardputer builds need community testing)
 - NEW GAME: **Legend of Emberwood**, a top-down adventure (original hero Kiri). 10 screens: village (merchant, blacksmith, old Magda, Pip, guard), forest (river, waterfall, bridge, clearing, ruins), crypt (torch-lit rooms, spike traps) and the volcanic arena of the **Ember Golem** boss (3 phases: slam + shockwave, fire eruptions, flaming boulders and orbiting shards).
 - Tilt to walk, A = sword / talk / open, B = roll (dodge), PWR = pause. Hearts, gems, keys, chests, breakable urns, cuttable tall grass, day/night cycle with fireflies in the forest, dynamic torch lighting in the crypt, auto-save (NVS) with Continue / New game.

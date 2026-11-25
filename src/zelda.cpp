@@ -30,7 +30,7 @@ static bool swap16 = true;
 static uint32_t last = 0, acc = 0, tick = 0;
 static Preferences pr;
 static uint32_t flags = 0; static int gems = 0, keys = 0, maxhp = 10, checkpoint = 0, playSecs = 0, stepSec = 0;
-static bool hasSave = false;
+static bool hasSave = false; static int finalScore = 0;
 static int room = 0, fadeT = 0, fadeDir = 0, nextRoom = -1, nextX = 0, nextY = 0, shakeT = 0, offX = 0, offY = 0;
 static uint32_t tod = 0;                        // heure du jour (pas de 20 ms), cycle de 9000 pas
 static uint8_t coll[14][30];
@@ -663,7 +663,14 @@ static void heroStep() {
       if (hero.kb > 0) { hero.kb--; moveBox(hero.x, hero.y, hero.kbx, hero.kby, 5, 4, false, nullptr, true); }
       if (hero.t > 10) hero.st = H_WALK; break;
     case H_DEAD: if (hero.t > 70) mode = GAMEOVER; break;
-    case H_WIN: if (hero.t > 150) { if (hero.endAfter) mode = ENDING; else hero.st = H_WALK; } break;
+    case H_WIN: if (hero.t > 150) {
+        if (hero.endAfter) {                            // fin : score + medaille (bronze = golem vaincu, puis selon le temps)
+          finalScore = 5000 + (playSecs < 1800 ? (1800 - playSecs) * 2 : 0) + gems * 10 + hero.hp * 50;
+          trophy::record(trophy::T_EMBER, finalScore);
+          Preferences q; q.begin(dns("ember"), false); if (finalScore > q.getInt("best", 0)) q.putInt("best", finalScore); q.end();
+          mode = ENDING;
+        } else hero.st = H_WALK;
+      } break;
   }
   // sorties de salle
   const Room& r = curRoom();
@@ -972,8 +979,9 @@ static void overScreen(bool win) {
   } else {
     txtO(L("VICTORY!", "VICTOIRE !"), 120, 46, &fonts::Font2, rgb(255, 214, 120), 0, textdatum_t::top_center);
     char b[48]; snprintf(b, sizeof b, L("TIME %d:%02d   GEMS %d", "TEMPS %d:%02d   GEMMES %d"), playSecs / 60, playSecs % 60, gems);
-    txt(b, 120, 68, &fonts::Font0, rgb(255, 248, 232), textdatum_t::top_center);
-    txt(L("EMBERWOOD IS SAVED. A: MENU", "EMBERWOOD EST SAUVE. A : MENU"), 120, 82, &fonts::Font0, rgb(180, 220, 255), textdatum_t::top_center);
+    txt(b, 120, 64, &fonts::Font0, rgb(255, 248, 232), textdatum_t::top_center);
+    snprintf(b, sizeof b, "SCORE %d", finalScore); txt(b, 120, 73, &fonts::Font0, rgb(255, 214, 120), textdatum_t::top_center);
+    txt(L("EMBERWOOD IS SAVED. A: MENU", "EMBERWOOD EST SAUVE. A : MENU"), 120, 84, &fonts::Font0, rgb(180, 220, 255), textdatum_t::top_center);
   }
 }
 
@@ -1034,6 +1042,11 @@ void loop() {
   while (acc >= STEP_US) {
     aPress = aPend; bPress = bPend; pPress = pPend; aPend = bPend = pPend = false;
     step(); acc -= STEP_US;
+  }
+  {                                                     // musique (boucles originales de bgm.cpp)
+    int z = mode == TITLE ? Z_FOREST : curRoom().zone;
+    int id = z == Z_CRYPT ? 16 : (z == Z_ARENA ? ((gb.on && !gb.dead && gb.st != GB_SLEEP) ? 17 : 16) : 15);
+    bgm::run(id, mode == TITLE || mode == PLAY || mode == DIALOG);
   }
   if (mode == TITLE) titleScreen();
   else {

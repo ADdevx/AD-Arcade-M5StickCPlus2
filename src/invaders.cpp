@@ -128,7 +128,7 @@ static void step() {
   if (state == OVER) { endT++; return; }
   if (state == WAVEUP) ui::notice(L("WAVE CLEAR!", "VAGUE REUSSIE !"), L("GET READY", "PREPARE-TOI"), nullptr, P_S);
   tilt::update();
-  float t = tilt::x(); if (fabsf(t) < 0.07f) t = 0; else t = t > 0 ? t - 0.07f : t + 0.07f;
+  float t = ctrl::x(); if (fabsf(t) < 0.07f) t = 0; else t = t > 0 ? t - 0.07f : t + 0.07f;
   padV += (t * 4.8f - padV) * 0.3f;
   padX = clampf(padX + padV, 10, SCR_W - 10);
   // ----- PLAY -----
@@ -240,7 +240,8 @@ void loop() {
     case TITLE: if (a) { reset(); state = PLAY; sfx(660, 40); } break;
         case PLAY:
       if (p) { state = PAUSED; sfx(440, 50); }
-      else if (a && !pb) { pb = true; pbx = padX; pby = SHIP_Y - 3; sfx(1500, 20); sfx(900, 30, false); }
+      else if ((a || g_btnCtrl) && !pb) {                              // mode boutons : tir automatique
+       pb = true; pbx = padX; pby = SHIP_Y - 3; sfx(1500, 20); sfx(900, 30, false); }
       break;
     case PAUSED: if (p || a) { state = PLAY; sfx(660, 50); } break;
     case WAVEUP: break;

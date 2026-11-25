@@ -133,7 +133,7 @@ static void step() {
   if (state != PLAY) { if (state == TITLE) { float l, r, c; edges(BY, l, r, c); bx += (c - bx) * 0.05f; } return; }
   steps++;
   tilt::update();
-  float t = tilt::x(); if (fabsf(t) < 0.06f) t = 0; else t = t > 0 ? t - 0.06f : t + 0.06f;
+  float t = ctrl::x(); if (fabsf(t) < 0.06f) t = 0; else t = t > 0 ? t - 0.06f : t + 0.06f;
   tf += (t - tf) * 0.4f;                                                  // entree lissee
   bv += (tf * 4.0f - bv) * 0.18f; bx += bv;
   float l, r, c; edges(BY, l, r, c);

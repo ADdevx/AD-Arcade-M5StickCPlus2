@@ -212,12 +212,12 @@ static void step() {
   tilt::update();
   const CarDef &cd = CARS[carSel];
   float steerM = 0.7f + 0.12f * cd.handStars, topM = 0.95f + 0.06f * cd.speedStars;
-  float t = tilt::x(); if (fabsf(t) < 0.06f) t = 0; else t = t > 0 ? t - 0.06f : t + 0.06f;
+  float t = ctrl::x(); if (fabsf(t) < 0.06f) t = 0; else t = t > 0 ? t - 0.06f : t + 0.06f;
   pv += (t * 4.6f * steerM - pv) * 0.25f;
   px += pv;
   if (px < ROAD_L + 8) { px = ROAD_L + 8; pv = 0; spd *= 0.985f; }
   if (px > ROAD_R - 8) { px = ROAD_R - 8; pv = 0; spd *= 0.985f; }
-  boosting = M5.BtnA.isPressed() && nitro > 0.02f;
+  boosting = (g_btnCtrl ? (M5.BtnA.isPressed() && M5.BtnB.isPressed()) : M5.BtnA.isPressed()) && nitro > 0.02f;   // boutons : A+B = nitro
   if (boosting) nitro -= 0.006f; else if (nitro < 1.0f) nitro += 0.0015f;
   steps++;
   float vmax = (2.6f + steps * 0.0007f); if (vmax > 4.3f) vmax = 4.3f;

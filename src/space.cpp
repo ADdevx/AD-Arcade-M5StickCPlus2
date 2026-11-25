@@ -60,7 +60,7 @@ static void step() {
   if (state == TITLE) return;
   if (state == OVER) { overT++; for (auto &m : mets) if (m.on) { m.y += m.vy; m.ang += m.spin; if (m.y > SCR_H + 20) m.on = false; } return; }
   tilt::update();
-  float t = tilt::x(); if (fabsf(t) < 0.08f) t = 0; else t = t > 0 ? t - 0.08f : t + 0.08f;
+  float t = ctrl::x(); if (fabsf(t) < 0.08f) t = 0; else t = t > 0 ? t - 0.08f : t + 0.08f;
   float target = t * 5.0f;
   shipV += (target - shipV) * 0.25f;
   shipX += shipV; shipX = clampf(shipX, 9, SCR_W - 9);

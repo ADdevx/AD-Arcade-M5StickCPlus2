@@ -24,6 +24,10 @@ bool g_unlockAll = false;                     // mode admin
 int  g_skin = 0;                              // apparence du heros
 uint32_t g_rngState = 1; bool g_rngSeeded = false;
 bool g_quit = false;
+int  g_ctrl = 0; bool g_btnCtrl = false;     // commandes : 0 demander, 1 inclinaison, 2 boutons
+bool g_flip = false;                          // ecran retourne
+static int g_baseRot = SCR_ROT;
+void applyRotation() { M5.Display.setRotation((g_baseRot + (g_flip ? 2 : 0)) & 3); }
 static const int BRI[5] = {30, 70, 120, 180, 255};
 static const uint32_t SLEEP_MS[5] = {30000, 60000, 120000, 300000, 0};
 static Preferences mp;
@@ -31,7 +35,7 @@ static Preferences mp;
 static const int VOLS[6] = {0, 40, 80, 140, 200, 255};
 void applyBrightness() { M5.Display.setBrightness(BRI[g_bright]); }
 void applyVolume() { g_sound = g_vol > 0; M5.Speaker.setVolume(VOLS[g_vol]); }
-void saveSettings() { mp.putInt("bri", g_bright); mp.putInt("vol", g_vol); mp.putBool("snd", g_sound); mp.putBool("mus", g_music); mp.putInt("slp", g_sleepIdx); mp.putInt("lang", g_lang); mp.putInt("theme", g_theme); mp.putInt("diff", g_diff); mp.putInt("skin", g_skin); mp.putBool("unl", g_unlockAll); mp.putBool("ni", g_noIntro); mp.putBool("crt", g_crt); mp.putBool("inv", g_invert); mp.putBool("rbw", g_rainbow); }
+void saveSettings() { mp.putInt("ctl", g_ctrl); mp.putBool("flip", g_flip); mp.putInt("bri", g_bright); mp.putInt("vol", g_vol); mp.putBool("snd", g_sound); mp.putBool("mus", g_music); mp.putInt("slp", g_sleepIdx); mp.putInt("lang", g_lang); mp.putInt("theme", g_theme); mp.putInt("diff", g_diff); mp.putInt("skin", g_skin); mp.putBool("unl", g_unlockAll); mp.putBool("ni", g_noIntro); mp.putBool("crt", g_crt); mp.putBool("inv", g_invert); mp.putBool("rbw", g_rainbow); }
 
 // ----------------------------------------------------------------------------- skins (apparences du heros)
 namespace skin {
@@ -78,7 +82,11 @@ static bool g_pwrHold = false;   // vrai une frame quand l'utilisateur demande "
 //  - Tous : A+B maintenus ~1,2 s = retour au menu (marche meme si PWR ne peut pas etre maintenu).
 void btnUpdate() {
 #ifdef AD_CARDPUTER
+  // M5.update() remet BtnA a l'etat du bouton Go (G0) a chaque image : l'appui clavier (Entree) etait alors
+  // annule par l'anti-rebond et A ne marchait jamais au clavier. On garde l'etat de BtnA et on le recalcule nous-memes.
+  m5::Button_Class keepA = M5.BtnA;
   M5Cardputer.update();
+  M5.BtnA = keepA;
 #else
   M5.update();
 #endif
@@ -87,12 +95,18 @@ void btnUpdate() {
 #if defined(AD_CARDPUTER)
   {                                                                                        // Cardputer : le clavier joue le role des boutons et du tilt
     auto &kb = M5Cardputer.Keyboard;
-    bool kA = kb.isKeyPressed((char)KEY_ENTER) || kb.isKeyPressed(' ');
-    bool kB = kb.isKeyPressed((char)KEY_TAB);
-    bool kP = kb.isKeyPressed((char)KEY_BACKSPACE) || kb.isKeyPressed('`');
+    auto &ks = kb.keysState();
+    bool kA = kb.isKeyPressed((char)KEY_ENTER) || kb.isKeyPressed(' ') || ks.enter || ks.space;
+    bool kB = kb.isKeyPressed((char)KEY_TAB) || ks.tab || ks.ctrl;                  // Ctrl = B aussi (Cardputer-ADV)
+    bool kP = kb.isKeyPressed((char)KEY_BACKSPACE) || kb.isKeyPressed('`') || ks.del;
     g_kbdX = (kb.isKeyPressed('/') ? 1 : 0) - (kb.isKeyPressed(',') ? 1 : 0);
     g_kbdY = (kb.isKeyPressed('.') ? 1 : 0) - (kb.isKeyPressed(';') ? 1 : 0);
-    M5.BtnA.setRawState(now, M5.BtnA.isPressed() || kA); M5.BtnB.setRawState(now, kB); M5.BtnPWR.setRawState(now, kP);
+    // le clavier de l'ADV (TCA8418) peut ne signaler un appui bref que pendant 1 image : on le prolonge 80 ms
+    // pour qu'il passe l'anti-rebond des boutons (sinon "Entree" ne valide pas toujours)
+    static uint32_t uA = 0, uB = 0, uP = 0;
+    if (kA) uA = now + 80; if (kB) uB = now + 80; if (kP) uP = now + 80;
+    bool goBtn = digitalRead(0) == LOW;                                                // bouton G0 (Go)
+    M5.BtnA.setRawState(now, goBtn || kA || now < uA); M5.BtnB.setRawState(now, kB || now < uB); M5.BtnPWR.setRawState(now, kP || now < uP);
   }
 #elif defined(CONFIG_IDF_TARGET_ESP32C6)
   M5.BtnPWR.setRawState(now, M5.Touch.getCount() > 0);
@@ -144,11 +158,65 @@ static const GameDef GAMES[] = {
   {"SETTINGS",       "REGLAGES",       settings::begin, settings::loop, settings::icon},
 };
 static const int NGAMES = sizeof(GAMES) / sizeof(GAMES[0]);
-void gameBegin(int idx) { stats::play(idx); GAMES[idx].begin(); }
+void gameBegin(int idx) { stats::play(idx); ctrl::prepare(idx); GAMES[idx].begin(); }
 void gameLoop(int idx) { GAMES[idx].loop(); }
 const char* gameName(int idx) { return L(GAMES[idx].en, GAMES[idx].fr); }
 void gameIcon(int idx, int x, int y) { GAMES[idx].icon(x, y); }
+// ----------------------------------------------------------------------------- commandes : inclinaison ou boutons
+namespace ctrl {
+// jeux (index du menu) jouables aux boutons + aide affichee sur l'ecran de choix
+static const int8_t SUP[] = {2, 4, 5, 6, 8, 10, 12, 13, 14};
+bool supports(int g) { for (int8_t s : SUP) if (s == g) return true; return false; }
+int remembered(int g) { Preferences p; p.begin("ctrl", true); char k[6]; snprintf(k, sizeof k, "g%d", g); int v = p.getInt(k, 0); p.end(); return v; }
+void remember(int g, bool b) { Preferences p; p.begin("ctrl", false); char k[6]; snprintf(k, sizeof k, "g%d", g); p.putInt(k, b ? 1 : 0); p.end(); }
+void prepare(int g) { g_btnCtrl = supports(g) && (g_ctrl == 2 || (g_ctrl == 0 && remembered(g) == 1));
+#ifdef ZTEST
+  fprintf(stderr, "prepare %d ctrl=%d rem=%d -> %d%c", g, g_ctrl, remembered(g), (int)g_btnCtrl, 10);
+#endif
+}
+const char* hint(int g) {
+  switch (g) {
+    case 8:  return L("A: right  B: left  A+B: nitro", "A : droite  B : gauche  A+B : nitro");
+    case 5:  return L("A: right  B: left  (auto fire)", "A : droite  B : gauche  (tir auto)");
+    case 12: return L("A/B: move  A+B: rotate  hold: drop", "A/B : bouger  A+B : tourner  tenir : chute");
+    case 13: return L("A: turn right  B: turn left", "A : tourne a droite  B : a gauche");
+    case 14: return L("A/B: rotate  A+B: thrust", "A/B : pivoter  A+B : poussee");
+    default: return L("A: right  B: left", "A : droite  B : gauche");
+  }
+}
+static float bv = 0;
+float x() {
+  if (!g_btnCtrl) return tilt::x();
+  bool a = M5.BtnA.isPressed(), b = M5.BtnB.isPressed();
+  float target = (a && !b) ? 0.62f : ((b && !a) ? -0.62f : 0.f);
+  bv += (target - bv) * 0.30f; if (fabsf(bv) < 0.01f) bv = 0;
+  return bv;
+}
+}  // namespace ctrl
+
 static int sel = 0, running = -1;
+static int choosing = -1, chooseSel = 0;      // ecran "inclinaison ou boutons ?" avant un jeu
+static void drawChoose() {
+  ui::bg((int)(millis() / 60));
+  ui::header(gameName(choosing), P_G);
+  txt(L("How do you want to play?", "Comment veux-tu jouer ?"), SCR_W / 2, 22, &fonts::Font0, P_K, textdatum_t::top_center);
+  for (int k = 0; k < 2; k++) {
+    int x = 14 + k * 112, y = 34, w = 100, h = 62; bool on = k == chooseSel;
+    canvas.fillRect(x - 1, y - 1, w + 2, h + 2, P_K); canvas.fillRect(x, y, w, h, on ? P_S : P_B);
+    if (on) { canvas.fillRect(x, y, w, 2, P_G); canvas.drawRect(x - 3, y - 3, w + 6, h + 6, P_K); }
+    int cx = x + w / 2, cy = y + 24;
+    if (k == 0) {                                      // M5 penche
+      for (int i = -14; i <= 14; i++) { int yy = cy + i / 3; canvas.drawFastVLine(cx + i, yy - 8, 16, P_K); }
+      for (int i = -12; i <= 12; i++) { int yy = cy + i / 3; canvas.drawFastVLine(cx + i, yy - 6, 12, P_M); }
+      canvas.fillTriangle(cx - 30, cy + 8, cx - 22, cy + 3, cx - 22, cy + 13, P_R); canvas.fillTriangle(cx + 30, cy - 8, cx + 22, cy - 13, cx + 22, cy - 3, P_R);
+    } else {                                           // boutons A / B
+      for (int b = 0; b < 2; b++) { int bx = cx - 18 + b * 24; canvas.fillCircle(bx + 6, cy, 10, P_K); canvas.fillCircle(bx + 6, cy, 8, b ? P_R : P_G); txt(b ? "A" : "B", bx + 6, cy - 6, &fonts::Font2, P_K, textdatum_t::top_center); }
+    }
+    txt(k == 0 ? L("TILT", "INCLINAISON") : L("BUTTONS", "BOUTONS"), cx, y + h - 16, &fonts::Font0, P_K, textdatum_t::top_center);
+  }
+  txt(chooseSel ? ctrl::hint(choosing) : L("Tilt the console to steer", "Incline la console pour diriger"), SCR_W / 2, 104, &fonts::Font0, P_K, textdatum_t::top_center);
+  ui::footer(L("B: change   A: play", "B : changer   A : jouer"));
+}
 static float slide = 0;                       // animation de defilement (en tuiles)
 static uint32_t lastAct = 0;                  // dernier appui (pour l'ecran de veille)
 static int saver = 0;                         // 0 = normal, 1 = veille (animation), 2 = ecran eteint
@@ -259,7 +327,7 @@ static void drawSaver() {
 
 static void toMenu() {
   music::end(); session::end(); stats::flush(); bgm::stop(); running = -1; slide = 0; g_quit = false; lastAct = millis(); saver = 0; if (adapted) { toastT = millis(); adapted = false; }
-  M5.Speaker.stop(); applyBrightness();
+  M5.Speaker.stop(); applyBrightness(); g_btnCtrl = false; choosing = -1;
 }
 
 // ----------------------------------------------------------------------------- intro facon demo scene des annees 90
@@ -327,6 +395,8 @@ void setup() {
 #endif
   if (M5.getBoard() == m5::board_t::board_M5StickCPlus2) { pinMode(4, OUTPUT); digitalWrite(4, HIGH); }   // maintien de l'alimentation (StickC Plus2 uniquement)
   M5.Display.setRotation(SCR_ROT);
+  if (M5.Display.width() < M5.Display.height()) g_baseRot = (SCR_ROT + 1) & 3;   // securite : toujours en paysage (selon la version de M5GFX)
+  applyRotation();
   mp.begin("arcade", false);
   sel = mp.getInt("sel", 0); if (sel < 0 || sel >= NGAMES) sel = 0;
   g_bright = mp.getInt("bri", 2); if (g_bright < 0 || g_bright > 4) g_bright = 2;
@@ -337,6 +407,7 @@ void setup() {
   g_music = mp.getBool("mus", true);
   g_lang = mp.getInt("lang", 0) ? 1 : 0; g_theme = mp.getInt("theme", 0); if (g_theme < 0 || g_theme >= themeCount()) g_theme = 0;
   g_sleepIdx = mp.getInt("slp", 1); if (g_sleepIdx < 0 || g_sleepIdx > 4) g_sleepIdx = 1;
+  g_ctrl = mp.getInt("ctl", 0); if (g_ctrl < 0 || g_ctrl > 2) g_ctrl = 0; g_flip = mp.getBool("flip", false); applyRotation();
   applyBrightness();
   applyVolume();
   canvas.setColorDepth(16);
@@ -360,6 +431,15 @@ void loop() {
     stats::tick(running < trophy::T_COUNT ? running : session::activeGame());
     return;
   }
+  if (choosing >= 0) {                                                      // ecran de choix des commandes
+    if (M5.BtnB.wasPressed() || M5.BtnPWR.wasPressed()) { chooseSel ^= 1; sfx(1200, 15); }
+    if (M5.BtnA.wasPressed()) {
+      ctrl::remember(choosing, chooseSel == 1); sfx(880, 40); sfx(1320, 60, false);
+      if (!chooseSel && tilt::adapt()) adapted = true;
+      g_quit = false; sel = choosing; choosing = -1; gameBegin(sel); running = sel; lastAct = millis(); return;
+    }
+    drawChoose(); present(0, 0); lastAct = millis(); return;
+  }
   uint32_t now = millis();
   // ----- ecran de veille (uniquement dans le menu)
   if (saver) {
@@ -379,6 +459,7 @@ void loop() {
   if (slide != 0) { slide *= 0.7f; if (fabsf(slide) < 0.03f) slide = 0; }
   if (M5.BtnA.wasPressed()) {
     mp.putInt("sel", sel); sfx(880, 50); sfx(1320, 90, false);
+    if (ctrl::supports(sel) && g_ctrl == 0) { choosing = sel; chooseSel = ctrl::remembered(sel); return; }   // inclinaison ou boutons ?
     if (tilt::adapt()) adapted = true;                                      // detecte a plat / debout et re-stabilise si besoin
     g_quit = false; if (sel < trophy::T_COUNT) gameBegin(sel); else GAMES[sel].begin(); running = sel;
     return;

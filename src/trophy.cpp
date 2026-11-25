@@ -25,6 +25,7 @@ static const Def DEFS[T_COUNT] = {
   {"Tetris",       "Tetris",        "tetris",     "best", 1000, 3000, 8000},
   {"Snake",        "Snake",         "snake",      "best", 150,  400,  800},
   {"Lunar Lander", "Alunissage",    "lander",     "best", 600, 1800, 4000},
+  {"Emberwood",    "Emberwood",     "ember",      "best", 5000, 6500, 8000},  // score de fin (golem vaincu)
 };
 
 static int medalOf(int id, int v) { const Def& d = DEFS[id]; return v >= d.g ? 3 : (v >= d.s ? 2 : (v >= d.b ? 1 : 0)); }
@@ -64,7 +65,7 @@ static uint32_t until = 0, since = 0, lastT = 0; static int bMedal = 0, lastId =
 
 void record(int id, uint32_t value) {
   if (id < 0 || id >= T_COUNT) return;
-  if (id != T_MAZE && id != T_LANDER) session::onOver(id, (int)value);     // fin de partie (defi du jour / 2 joueurs)
+  if (id != T_MAZE && id != T_LANDER && id != T_EMBER) session::onOver(id, (int)value);     // fin de partie (defi du jour / 2 joueurs)
   if (g_diff == 0) return;                                                // facile = entrainement, pas de medailles
   int m = medalOf(id, (int)value), pm = medalOf(id, stored(id, g_diff));
   if (m <= 0) return;
