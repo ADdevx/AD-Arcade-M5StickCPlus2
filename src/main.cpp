@@ -165,7 +165,7 @@ void gameIcon(int idx, int x, int y) { GAMES[idx].icon(x, y); }
 // ----------------------------------------------------------------------------- commandes : inclinaison ou boutons
 namespace ctrl {
 // jeux (index du menu) jouables aux boutons + aide affichee sur l'ecran de choix
-static const int8_t SUP[] = {2, 4, 5, 6, 8, 10, 12, 13, 14};
+static const int8_t SUP[] = {12, 13};          // Tetris, Snake (les autres jeux restent a l'inclinaison)
 bool supports(int g) { for (int8_t s : SUP) if (s == g) return true; return false; }
 int remembered(int g) { Preferences p; p.begin("ctrl", true); char k[6]; snprintf(k, sizeof k, "g%d", g); int v = p.getInt(k, 0); p.end(); return v; }
 void remember(int g, bool b) { Preferences p; p.begin("ctrl", false); char k[6]; snprintf(k, sizeof k, "g%d", g); p.putInt(k, b ? 1 : 0); p.end(); }
@@ -178,7 +178,7 @@ const char* hint(int g) {
   switch (g) {
     case 8:  return L("A: right  B: left  A+B: nitro", "A : droite  B : gauche  A+B : nitro");
     case 5:  return L("A: right  B: left  (auto fire)", "A : droite  B : gauche  (tir auto)");
-    case 12: return L("A/B: move  A+B: rotate  hold: drop", "A/B : bouger  A+B : tourner  tenir : chute");
+    case 12: return L("B/A: move  PWR: rotate  hold A+B: drop", "B/A : bouger  PWR : tourner  A+B : chute");
     case 13: return L("A: turn right  B: turn left", "A : tourne a droite  B : a gauche");
     case 14: return L("A/B: rotate  A+B: thrust", "A/B : pivoter  A+B : poussee");
     default: return L("A: right  B: left", "A : droite  B : gauche");
