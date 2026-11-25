@@ -314,12 +314,8 @@ static void render() {
   if (gx >= 0 && state == PLAY) {                               // temps restant de la pomme doree
     int w = gT * 40 / GOLD_TIME; canvas.fillRect(SCR_W / 2 + 40, 4, 40, 6, rgb(60, 44, 10)); canvas.fillRect(SCR_W / 2 + 40, 4, w, 6, rgb(255, 205, 40)); canvas.drawRect(SCR_W / 2 + 40, 4, 40, 6, rgb(190, 120, 10));
   }
-  if (state == PAUSED) { canvas.fillRoundRect(80, 52, 80, 28, 5, rgb(10, 24, 16)); canvas.drawRoundRect(80, 52, 80, 28, 5, rgb(255, 224, 120)); txt("PAUSE", SCR_W / 2, 56, &fonts::Font4, TFT_WHITE, textdatum_t::top_center); }
-  if (state == OVER) {
-    canvas.fillRoundRect(50, 38, 140, 60, 6, rgb(10, 24, 16)); canvas.drawRoundRect(50, 38, 140, 60, 6, rgb(230, 80, 70));
-    txt("GAME OVER", SCR_W / 2, 42, &fonts::Font4, rgb(230, 80, 70), textdatum_t::top_center);
-    snprintf(b, sizeof b, L("%lu   best %lu", "%lu   record %lu"), (unsigned long)score, (unsigned long)best); txt(b, SCR_W / 2, 72, &fonts::Font2, TFT_WHITE, textdatum_t::top_center);
-  }
+  if (state == PAUSED) ui::pause();
+  if (state == OVER) ui::gameOver("GAME OVER", score, best, (score) > 0 && (uint32_t)(score) >= (uint32_t)(best));
 }
 
 static void turn(int d) {
@@ -359,6 +355,12 @@ void icon(int x, int y) {
   float hdx = ix[0] - ix[1], hdy = iy[0] - iy[1], l = sqrtf(hdx * hdx + hdy * hdy); if (l < 0.01f) l = 1; hdx /= l; hdy /= l;
   drawBody(ix, iy, N, hdx, hdy, 99, false, false, 0, 6);
   drawApple(x + 52, y + 50, false, 0);
+}
+
+void preview(int cx, int cy) {
+  float px[8], py[8]; int n = 8; float t = millis() * 0.004f;
+  for (int i = 0; i < n; i++) { px[i] = cx + 18 - i * 5.0f; py[i] = cy + sinf(t - i * 0.8f) * 4.0f; }
+  drawBody(px, py, n, 1.0f, 0.0f, -9.0f, false, false, (int)(millis() / 50), 0);
 }
 
 }  // namespace snake

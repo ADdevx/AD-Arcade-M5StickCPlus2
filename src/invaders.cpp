@@ -22,12 +22,12 @@ static const uint8_t SPR[3][2][7] = {
 };
 static const uint8_t ROWTYPE[AROWS] = {0, 1, 1, 2};
 static const int ROWPTS[AROWS] = {30, 20, 20, 10};
-static const uint16_t TYPECOL[3] = {rgb(255, 100, 210), rgb(90, 225, 255), rgb(130, 255, 120)};
+static const uint16_t TYPECOL[3] = {P_G, P_S, P_R};
 
 static uint8_t alive[AROWS][ACOLS]; static int nAlive = 0;
 static float gx, gy; static int dir = 1, moveT = 0, frame = 0, noteI = 0;
 static float padX = 120, padV = 0;
-static int lives = 3, wave = 1, invul = 0, readyT = 0, endT = 0, animT = 0;
+static int lives = 3, wave = 1, invul = 0, endT = 0, animT = 0;
 static uint32_t score = 0, best = 0;
 static bool pb = false; static float pbx, pby;
 struct Bomb { float x, y; bool on; }; static Bomb bombs[3]; static int bombT = 60;
@@ -126,7 +126,7 @@ static void step() {
   for (auto &b : booms) if (b.t > 0) b.t--;
   if (state == TITLE || state == PAUSED) return;
   if (state == OVER) { endT++; return; }
-  if (state == WAVEUP) { if (++endT > 80) { wave++; startWave(); state = PLAY; } return; }
+  if (state == WAVEUP) ui::notice(L("WAVE CLEAR!", "VAGUE REUSSIE !"), L("GET READY", "PREPARE-TOI"), nullptr, P_S);
   tilt::update();
   float t = tilt::x(); if (fabsf(t) < 0.07f) t = 0; else t = t > 0 ? t - 0.07f : t + 0.07f;
   padV += (t * 4.8f - padV) * 0.3f;
@@ -165,59 +165,70 @@ static void step() {
   if (nAlive <= 0) { state = WAVEUP; endT = 0; pb = false; sfx(988, 80); sfx(1318, 80, false); sfx(1760, 160, false); }
 }
 
+static const uint16_t TCOL[3] = {P_G, P_S, P_R};
 static void drawSpr(const uint8_t* rows, int x, int y, uint16_t col, int sc = 2) {
-  for (int j = 0; j < 7; j++) for (int i = 0; i < 8; i++) if (rows[j] & (0x80 >> i)) canvas.fillRect(x + i * sc, y + j * sc, sc, sc, col);
+  if (sc >= 2) for (int j = 0; j < 7; j++) for (int i = 0; i < 8; i++) if (rows[j] & (0x80 >> i)) canvas.fillRect(x + i * sc - 1, y + j * sc - 1, sc + 2, sc + 2, P_K);   // contour noir 1 px
+  for (int j = 0; j < 7; j++) for (int i = 0; i < 8; i++) if (rows[j] & (0x80 >> i)) canvas.fillRect(x + i * sc, y + j * sc, sc, sc, j < 1 ? P_B : (j > 4 ? P_M : col));
+  if (sc >= 2) { canvas.fillRect(x + 2 * sc, y + 3 * sc, sc, sc, P_K); canvas.fillRect(x + 5 * sc, y + 3 * sc, sc, sc, P_K); }   // yeux
 }
 static void drawShip(int x, int y, uint16_t col) {
-  canvas.fillRect(x - 8, y + 4, 16, 4, col);
-  canvas.fillRect(x - 6, y + 2, 12, 3, col);
-  canvas.fillRect(x - 1, y - 2, 3, 5, col);
-  canvas.fillRect(x - 8, y + 7, 16, 1, rgb(40, 120, 40));
+  canvas.fillRect(x - 10, y + 2, 20, 7, P_K); canvas.fillRect(x - 3, y - 6, 7, 9, P_K); canvas.fillRect(x - 7, y, 15, 4, P_K);       // contour
+  canvas.fillRect(x - 9, y + 3, 18, 5, P_M); canvas.fillRect(x - 9, y + 3, 18, 1, P_L);                                           // ailes
+  canvas.fillRect(x - 6, y + 1, 13, 3, col); canvas.fillRect(x - 2, y - 4, 5, 6, col);                                            // coque
+  canvas.fillRect(x - 2, y - 4, 5, 1, P_B); canvas.fillRect(x - 6, y + 1, 13, 1, P_B);
+  canvas.fillRect(x - 1, y - 2, 3, 3, P_K); canvas.fillRect(x, y - 2, 1, 1, P_S);                                                 // cockpit spectral
+  canvas.fillRect(x - 9, y + 6, 3, 2, P_R); canvas.fillRect(x + 7, y + 6, 3, 2, P_R);
 }
 static void drawUfo(int x, int y) {
-  canvas.fillEllipse(x + 8, y + 4, 8, 3, rgb(230, 60, 60));
-  canvas.fillEllipse(x + 8, y + 2, 4, 3, rgb(255, 140, 140));
-  for (int i = 0; i < 3; i++) canvas.fillRect(x + 3 + i * 4, y + 4, 2, 1, rgb(255, 240, 120));
+  canvas.fillRect(x, y + 2, 17, 7, P_K); canvas.fillRect(x + 4, y - 1, 9, 4, P_K);
+  canvas.fillRect(x + 5, y, 7, 3, P_L); canvas.fillRect(x + 6, y, 3, 1, P_B);                                                      // dome
+  canvas.fillRect(x + 1, y + 3, 15, 4, P_R); canvas.fillRect(x + 1, y + 3, 15, 1, P_B); canvas.fillRect(x + 1, y + 6, 15, 1, P_D);  // soucoupe
+  for (int i = 0; i < 3; i++) canvas.fillRect(x + 3 + i * 4, y + 4, 2, 2, ((animT / 6 + i) & 1) ? P_G : P_M);
+}
+
+static void backdrop() {
+  ui::night(96);
+  canvas.fillRect(0, 96, SCR_W, SCR_H - 96, rgb(40, 28, 96)); canvas.fillRect(0, 96, SCR_W, 1, P_K);                                                     // bande d'horizon
+  canvas.fillCircle(198, 38, 17, P_K); canvas.fillCircle(198, 38, 16, P_M); canvas.fillCircle(197, 37, 14, P_L); canvas.fillCircle(193, 34, 5, P_M); canvas.fillCircle(203, 44, 3, P_M); canvas.fillRect(190, 28, 3, 2, P_B);   // lune
+  for (int i = 0; i < 18; i++) { int sx = (i * 97 + 13) % SCR_W, sy = HUD_H + 3 + (i * 53) % 90; bool tw = ((animT / 14 + i) % 6) == 0; canvas.fillRect(sx, sy, tw ? 2 : 1, tw ? 2 : 1, tw ? P_B : P_M); }
 }
 
 static void render() {
-  canvas.fillScreen(rgb(2, 3, 12));
-  for (int i = 0; i < 24; i++) { int sx = (i * 97 + 13) % SCR_W, sy = HUD_H + 2 + (i * 53) % 110; canvas.drawPixel(sx, sy, rgb(60 + (i * 7) % 60, 60 + (i * 7) % 60, 90)); }
+  backdrop();
   // boucliers
-  for (int s = 0; s < 3; s++) for (int r = 0; r < 5; r++) for (int c = 0; c < 12; c++) if (shield[s][r][c]) canvas.fillRect(SH_X[s] + c * 2, SH_Y + r * 2, 2, 2, rgb(70, 220, 90));
+  for (int s = 0; s < 3; s++) for (int r = 0; r < 5; r++) for (int c = 0; c < 12; c++) if (shield[s][r][c]) { uint16_t sc = (r == 0 || !shield[s][r - 1][c]) ? P_B : (r > 2 ? P_M : P_S); canvas.fillRect(SH_X[s] + c * 2, SH_Y + r * 2, 2, 2, sc); }
   // envahisseurs
   for (int r = 0; r < AROWS; r++) for (int c = 0; c < ACOLS; c++) if (alive[r][c]) drawSpr(SPR[ROWTYPE[r]][frame], (int)gx + c * APX, (int)gy + r * APY, TYPECOL[ROWTYPE[r]]);
   if (ufoOn) drawUfo((int)ufoX, 15);
   // tirs
-  if (pb) canvas.fillRect((int)pbx, (int)pby - 2, 2, 6, TFT_WHITE);
-  for (auto &b : bombs) if (b.on) { int o = ((int)b.y >> 2) & 1; canvas.fillRect((int)b.x + o, (int)b.y, 2, 3, rgb(255, 230, 80)); canvas.fillRect((int)b.x + 1 - o, (int)b.y + 3, 2, 3, rgb(255, 230, 80)); }
+  if (pb) { canvas.fillRect((int)pbx - 1, (int)pby - 3, 4, 9, P_K); canvas.fillRect((int)pbx, (int)pby - 2, 2, 7, P_B); }
+  for (auto &b : bombs) if (b.on) { int o = ((int)b.y >> 2) & 1; canvas.fillRect((int)b.x + o - 1, (int)b.y - 3, 4, 8, P_K); canvas.fillRect((int)b.x + o, (int)b.y - 2, 2, 3, P_R); canvas.fillRect((int)b.x + 1 - o, (int)b.y + 1, 2, 3, P_G); }
   // canon
-  if (state != OVER && (invul == 0 || (animT & 4))) drawShip((int)padX, SHIP_Y, skin::c(0, rgb(90, 255, 120)));
+  if (state != OVER && (invul == 0 || (animT & 4))) drawShip((int)padX, SHIP_Y, skin::c(0, P_L));
   // explosions
   for (auto &b : booms) if (b.t > 0) {
     int k = 12 - b.t; int x = (int)b.x, y = (int)b.y;
-    for (int a = 0; a < 8; a++) { float an = a * 0.7854f; canvas.drawPixel(x + (int)(cosf(an) * (2 + k)), y + (int)(sinf(an) * (2 + k)), b.col); canvas.drawPixel(x + (int)(cosf(an) * (1 + k / 2)), y + (int)(sinf(an) * (1 + k / 2)), TFT_WHITE); }
+    int r1 = k < 4 ? 6 - k : (k < 8 ? 3 + k / 2 : 8 - k / 2);
+    if (k < 4) { canvas.fillCircle(x, y, r1 + 1, P_K); canvas.fillCircle(x, y, r1, P_B); canvas.fillCircle(x, y, r1 - 2, b.col); }
+    else { for (int a = 0; a < 8; a++) { float an = a * 0.7854f; int d = 2 + k; canvas.fillRect(x + (int)(cosf(an) * d) - 1, y + (int)(sinf(an) * d) - 1, 3, 3, P_K); canvas.fillRect(x + (int)(cosf(an) * d), y + (int)(sinf(an) * d), 2, 2, a & 1 ? b.col : P_B); } }
   }
-  canvas.drawFastHLine(0, GROUND_Y, SCR_W, rgb(40, 140, 60));
+  canvas.fillRect(0, GROUND_Y, SCR_W, SCR_H - GROUND_Y, P_D); canvas.fillRect(0, GROUND_Y, SCR_W, 2, P_K); canvas.fillRect(0, GROUND_Y + 2, SCR_W, 1, P_L); canvas.fillRect(0, GROUND_Y + 3, SCR_W, 1, P_M);
+  for (int i = 0; i < 12; i++) canvas.fillRect(8 + i * 20, GROUND_Y + 6, 6, 1, P_M);
   // HUD
-  canvas.fillRect(0, 0, SCR_W, HUD_H, rgb(10, 12, 30)); canvas.drawFastHLine(0, HUD_H, SCR_W, rgb(50, 60, 110));
+  canvas.fillRect(0, 0, SCR_W, HUD_H, P_D); canvas.fillRect(0, HUD_H - 1, SCR_W, 1, P_M); canvas.fillRect(0, HUD_H, SCR_W, 1, P_K);
   char b[32];
-  snprintf(b, sizeof b, "%lu", (unsigned long)score); txt(b, 5, 0, &fonts::Font2, TFT_WHITE);
-  snprintf(b, sizeof b, L("WAVE %d","VAGUE %d"), wave); txt(b, SCR_W / 2, 0, &fonts::Font2, rgb(255, 210, 80), textdatum_t::top_center);
-  for (int i = 0; i < lives - (state == OVER ? 0 : 1); i++) drawShip(SCR_W - 14 - i * 20, 4, skin::c(0, rgb(90, 255, 120)));
+  snprintf(b, sizeof b, "%lu", (unsigned long)score); txt(b, 5, 0, &fonts::Font2, P_B);
+  snprintf(b, sizeof b, L("WAVE %d","VAGUE %d"), wave); txt(b, SCR_W / 2, 0, &fonts::Font2, P_G, textdatum_t::top_center);
+  for (int i = 0; i < lives - (state == OVER ? 0 : 1); i++) drawShip(SCR_W - 14 - i * 20, 4, skin::c(0, P_L));
   if (state == TITLE) {
-    canvas.fillRect(0, HUD_H + 1, SCR_W, SCR_H, rgb(2, 3, 12));
+    backdrop();
     for (int t = 0; t < 3; t++) drawSpr(SPR[t][(animT / 25) & 1], 62 + t * 46, 24, TYPECOL[t]);
-    txtO("INVADERS", SCR_W / 2, 48, &fonts::Font4, rgb(90, 255, 120), rgb(10, 60, 20), textdatum_t::top_center);
-    if (best > 0) { snprintf(b, sizeof b, L("best %lu","record %lu"), (unsigned long)best); txt(b, SCR_W / 2, 112, &fonts::Font2, rgb(255, 230, 120), textdatum_t::top_center); }
+    txtO("INVADERS", SCR_W / 2, 48, &fonts::Font4, P_S, P_K, textdatum_t::top_center, 1.5f);
+    if (best > 0) { snprintf(b, sizeof b, L("best %lu","record %lu"), (unsigned long)best); txt(b, SCR_W / 2, 112, &fonts::Font2, P_G, textdatum_t::top_center); }
   }
-  if (state == PAUSED) { canvas.fillRoundRect(80, 52, 80, 28, 5, rgb(10, 12, 30)); txt("PAUSE", SCR_W / 2, 56, &fonts::Font4, TFT_WHITE, textdatum_t::top_center); }
-  if (state == WAVEUP) { canvas.fillRoundRect(50, 52, 140, 28, 5, rgb(10, 12, 30)); canvas.drawRoundRect(50, 52, 140, 28, 5, rgb(90, 255, 120)); txt(L("WAVE CLEAR!","VAGUE REUSSIE !"), SCR_W / 2, 59, &fonts::Font2, rgb(90, 255, 120), textdatum_t::top_center); }
-  if (state == OVER) {
-    canvas.fillRoundRect(36, 40, 168, 62, 6, rgb(10, 12, 30)); canvas.drawRoundRect(36, 40, 168, 62, 6, rgb(230, 80, 70));
-    txt("GAME OVER", SCR_W / 2, 44, &fonts::Font4, rgb(230, 80, 70), textdatum_t::top_center);
-    snprintf(b, sizeof b, L("score %lu  best %lu","score %lu  record %lu"), (unsigned long)score, (unsigned long)best); txt(b, SCR_W / 2, 72, &fonts::Font2, TFT_WHITE, textdatum_t::top_center);
-  }
+  if (state == PAUSED) ui::pause();
+  if (state == WAVEUP) ui::notice(L("WAVE CLEAR!", "VAGUE REUSSIE !"), L("GET READY", "PREPARE-TOI"), nullptr, P_S);
+  if (state == OVER) ui::gameOver("GAME OVER", score, best, score > 0 && score >= best);
 }
 
 void loop() {
@@ -234,6 +245,7 @@ void loop() {
     case PAUSED: if (p || a) { state = PLAY; sfx(660, 50); } break;
     case WAVEUP: break;
     case OVER: if (a && endT > 40) { reset(); state = PLAY; sfx(660, 40); } break;
+    default: break;
   }
   while (acc >= STEP_US) { step(); acc -= STEP_US; }
   render();
@@ -242,12 +254,12 @@ void loop() {
 }
 
 void icon(int x, int y) {
-  canvas.fillRoundRect(x, y, 64, 64, 6, rgb(2, 3, 12));
-  for (int r = 0; r < 2; r++) for (int c = 0; c < 3; c++) drawSpr(SPR[r == 0 ? 0 : 1][0], x + 4 + c * 20, y + 5 + r * 17, TYPECOL[r == 0 ? 0 : 1], 2);
-  drawSpr(SPR[2][0], x + 24, y + 38, TYPECOL[2], 1); drawSpr(SPR[2][0], x + 38, y + 38, TYPECOL[2], 1);
-  canvas.fillRect(x + 31, y + 44, 2, 5, TFT_WHITE);
-  drawShip(x + 32, y + 52, rgb(90, 255, 120));
-  canvas.drawFastHLine(x + 4, y + 60, 56, rgb(40, 140, 60));
+  canvas.fillRoundRect(x, y, 64, 64, 6, P_K);
+  canvas.fillRect(x + 2, y + 44, 60, 18, P_D);
+  for (int r = 0; r < 2; r++) for (int c = 0; c < 3; c++) drawSpr(SPR[r == 0 ? 0 : 1][0], x + 5 + c * 19, y + 5 + r * 16, TYPECOL[r == 0 ? 0 : 1], 2);
+  canvas.fillRect(x + 31, y + 36, 2, 7, P_K); canvas.fillRect(x + 31, y + 37, 2, 5, P_B);
+  drawShip(x + 32, y + 50, P_L);
+  canvas.fillRect(x + 2, y + 60, 60, 2, P_M);
 }
 
 }  // namespace invaders

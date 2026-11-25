@@ -211,13 +211,19 @@ static void step() {
 
   tilt::update();
   float tx = tilt::x(), ty = tilt::y();
-  int dir = tx > 0.28f ? 1 : (tx < -0.28f ? -1 : 0);
-  if (dir == 0) { dasT = 0; lastDir = 0; }
-  else if (dir != lastDir) { dasT = 0; lastDir = dir; if (tryMove(dir, 0)) sfx(900, 10); }
-  else {
-    dasT++;
-    int iv = fabsf(tx) > 0.6f ? 2 : 4;
-    if (dasT >= 10 && (dasT - 10) % iv == 0 && tryMove(dir, 0)) sfx(900, 8);
+  // inclinaison moins nerveuse : seuil plus haut pour partir, hysteresis pour s'arreter,
+  // un petit delai avant le 1er pas, puis une longue pause avant la repetition (1 inclinaison = 1 case)
+  static int armT = 0;
+  int dir = lastDir;
+  if (tx > 0.40f) dir = 1; else if (tx < -0.40f) dir = -1;
+  else if (fabsf(tx) < 0.22f) dir = 0;
+  if (dir == 0) { dasT = 0; lastDir = 0; armT = 0; }
+  else if (dir != lastDir) {
+    if (++armT >= 3) { armT = 0; dasT = 0; lastDir = dir; if (tryMove(dir, 0)) sfx(900, 10); }
+  } else {
+    armT = 0; dasT++;
+    int iv = fabsf(tx) > 0.75f ? 4 : 7;
+    if (dasT >= 20 && (dasT - 20) % iv == 0 && tryMove(dir, 0)) sfx(900, 8);
   }
   bool sd = ty > 0.45f;
   int gf = (int)(GRAV[level > 20 ? 19 : level - 1] * dif(1.4f, 1.0f, 0.72f) + 0.5f); if (gf < 1) gf = 1;
@@ -351,13 +357,8 @@ static void render() {
     txt(banner, ox + FX + 30, yy, &fonts::Font2, clearN == 4 ? rgb(255, 220, 80) : TFT_WHITE, textdatum_t::top_center);
   }
   if (lvlT > 0 && (lvlT / 5) & 1) { snprintf(b, sizeof b, L("LEVEL %d", "NIVEAU %d"), level); txtO(b, ox + FX + 30, 18, &fonts::Font2, rgb(255, 224, 120), rgb(40, 20, 0), textdatum_t::top_center); }
-  if (state == PAUSED) { canvas.fillRoundRect(80, 50, 80, 28, 5, rgb(10, 12, 32)); canvas.drawRoundRect(80, 50, 80, 28, 5, ac); txt("PAUSE", SCR_W / 2, 54, &fonts::Font4, TFT_WHITE, textdatum_t::top_center); }
-  if (state == OVER && overT > 40) {
-    canvas.fillRoundRect(86, 36, 68, 62, 6, rgb(10, 12, 32)); canvas.drawRoundRect(86, 36, 68, 62, 6, rgb(230, 80, 70));
-    txt("GAME", SCR_W / 2, 40, &fonts::Font2, rgb(230, 80, 70), textdatum_t::top_center);
-    txt("OVER", SCR_W / 2, 55, &fonts::Font2, rgb(230, 80, 70), textdatum_t::top_center);
-    snprintf(b, sizeof b, "%lu", (unsigned long)score); txt(b, SCR_W / 2, 74, &fonts::Font2, TFT_WHITE, textdatum_t::top_center);
-  }
+  if (state == PAUSED) ui::pause();
+  if (state == OVER && overT > 40) ui::gameOver("GAME OVER", score, best, score > 0 && score >= best);
 }
 
 void loop() {

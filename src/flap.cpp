@@ -202,7 +202,7 @@ static void drawBird(int cx, int cy, float a, bool alive) {
   canvas.drawLine(wx0, wy0 - 1, wx1 + 1, wy1, wingL);                                                  // plume claire
 }
 
-static void drawMedal(int x, int y, int m) {
+[[maybe_unused]] static void drawMedal(int x, int y, int m) {
   uint16_t c1[4] = {rgb(190, 110, 60), rgb(200, 205, 215), rgb(255, 210, 50), rgb(170, 235, 245)};
   uint16_t c2[4] = {rgb(130, 70, 30), rgb(130, 135, 150), rgb(190, 140, 20), rgb(90, 160, 190)};
   canvas.fillTriangle(x - 5, y - 11, x + 1, y - 11, x - 1, y - 1, rgb(220, 50, 50)); canvas.fillTriangle(x + 5, y - 11, x - 1, y - 11, x + 1, y - 1, rgb(180, 30, 30));
@@ -235,19 +235,9 @@ static void render() {
     if ((animT / 22) & 1) txtO(L("PRESS A", "APPUIE SUR A"), SCR_W / 2, 84, &fonts::Font2, TFT_WHITE, rgb(60, 60, 60), textdatum_t::top_center);
     if (best > 0) { char b[24]; snprintf(b, sizeof b, L("best %d", "record %d"), best); txtO(b, SCR_W / 2, 100, &fonts::Font2, TFT_WHITE, rgb(60, 60, 60), textdatum_t::top_center); }
   }
-  if (state == PAUSED) txtO("PAUSE", SCR_W / 2, 52, &fonts::Font4, TFT_WHITE, rgb(60, 60, 60), textdatum_t::top_center);
+  if (state == PAUSED) ui::pause();
   if (flashT > 0) canvas.fillRect(0, 0, SCR_W, SCR_H, mixc(rgb(255, 255, 255), rgb(110, 200, 235), 256 - flashT * 40));
-  if (state == OVER && overTicks > 10) {
-    int dy = overTicks < 25 ? (25 - overTicks) * 3 : 0;
-    canvas.fillRoundRect(40, 18 + dy, 160, 88, 6, rgb(250, 240, 200)); canvas.drawRoundRect(40, 18 + dy, 160, 88, 6, rgb(110, 60, 0)); canvas.drawRoundRect(41, 19 + dy, 158, 86, 5, rgb(200, 170, 110));
-    txt("GAME OVER", SCR_W / 2, 22 + dy, &fonts::Font4, rgb(200, 50, 30), textdatum_t::top_center);
-    char b[24];
-    int m = score >= 40 ? 3 : (score >= 30 ? 2 : (score >= 20 ? 1 : (score >= 10 ? 0 : -1)));
-    snprintf(b, sizeof b, "%d", score); txt(L("SCORE", "SCORE"), 54, 52 + dy, &fonts::Font0, rgb(150, 100, 40)); txt(b, 54, 61 + dy, &fonts::Font4, rgb(80, 50, 10));
-    snprintf(b, sizeof b, "%d", best); txt(L("BEST", "RECORD"), 54, 92 + dy, &fonts::Font0, rgb(150, 100, 40)); txt(b, 100, 89 + dy, &fonts::Font2, rgb(80, 50, 10));
-    if (m >= 0) drawMedal(168, 70 + dy, m); else { canvas.drawCircle(168, 73 + dy, 9, rgb(190, 170, 130)); }
-    if (score == best && score > 0 && (animT / 10) & 1) txt("NEW!", 168, 90 + dy, &fonts::Font0, rgb(220, 60, 40), textdatum_t::top_center);
-  }
+  if (state == OVER && overTicks > 10) ui::gameOver("GAME OVER", score, best, score > 0 && score >= best);
 }
 
 void loop() {
@@ -278,4 +268,5 @@ void icon(int x, int y) {
   int saveW = wingT; wingT = 0; drawBird(x + 22, y + 30, -0.2f, true); wingT = saveW;
 }
 
+void preview(int cx, int cy) { int sw = wingT; wingT = (millis() / 110) % 3 ? 0 : 7; drawBird(cx, cy, sinf(millis() * 0.004f) * 0.2f, true); wingT = sw; }
 }  // namespace flap

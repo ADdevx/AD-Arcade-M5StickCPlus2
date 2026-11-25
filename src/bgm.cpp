@@ -150,7 +150,7 @@ static const Loop LOOPS[] = {
 static const int NL = sizeof(LOOPS) / sizeof(LOOPS[0]);
 struct Note { float freq, bass; int start, dur; };
 static Note notes[320]; static int nNotes = 0, totalMs = 1;
-static int cur = -1, curId = -1, idx = -1;
+static int cur = -1, curId = -1;
 static uint32_t t0 = 0, sfxUntil = 0;
 static const int CH = 6;
 
@@ -167,7 +167,7 @@ static void load(int id) {
     }
     p++;
     float d = atof(p); while (*p && *p != ' ' && *p != '/') p++;
-    int bmidi = -1;
+    [[maybe_unused]] int bmidi = -1;
     if (*p == '/') {   // note de basse
       p++; int n = base[*p++ - 'A']; if (*p == '#') { n++; p++; }
       bmidi = 12 * ((*p++ - '0') + 1) + n;

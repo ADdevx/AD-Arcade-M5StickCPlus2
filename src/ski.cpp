@@ -23,7 +23,7 @@ struct Track { float xl, xr, y; }; static Track trk[48]; static int nTrk = 0;
 struct Pop { float x, y; int t; char s[10]; uint16_t col; }; static Pop pops[4];
 
 static float sx = 120, sv = 0, speed = 1.8f;
-static int lives = 3, invul = 0, readyT = 0, endT = 0, animT = 0, combo = 0, gates = 0, missT = 0, steps = 0, slowT = 0;
+static int lives = 3, invul = 0, endT = 0, animT = 0, combo = 0, gates = 0, missT = 0, steps = 0, slowT = 0;
 static float dist = 0, spawnAcc = 0;
 static uint32_t score = 0, best = 0, bonus = 0;
 
@@ -109,7 +109,7 @@ static void step() {
     if (o.type == 3) {
       if (!o.scored && o.y <= cy) {
         o.scored = true;
-        if (fabsf(sx - o.x) < GATE_HALF - 3) { combo++; gates++; int pts = 20 + (combo > 6 ? 6 : combo) * 5; char b[10]; snprintf(b, sizeof b, "+%d", pts); bonus += pts; pop(sx, SKY - 14, b, rgb(70, 190, 70)); sfx(1100 + (combo > 6 ? 6 : combo) * 90, 40); sfx(1500 + (combo > 6 ? 6 : combo) * 90, 50, false); }
+        if (fabsf(sx - o.x) < GATE_HALF - 3) { combo++; gates++; int pts = 20 + (combo > 6 ? 6 : combo) * 5; char b[16]; snprintf(b, sizeof b, "+%d", pts); bonus += pts; pop(sx, SKY - 14, b, rgb(70, 190, 70)); sfx(1100 + (combo > 6 ? 6 : combo) * 90, 40); sfx(1500 + (combo > 6 ? 6 : combo) * 90, 50, false); }
         else { combo = 0; missT = 40; pop(sx, SKY - 14, L("MISS","RATE"), rgb(230, 120, 40)); sfx(260, 80); }
       }
       continue;
@@ -186,7 +186,7 @@ static void render() {
   if (!skierDone) drawS();
   for (auto &d : deco) drawTree((int)d.x, (int)d.y, d.s);
   // infos
-  for (auto &p : pops) if (p.t > 0) txtO(p.s, (int)p.x, (int)p.y, &fonts::Font2, p.col, TFT_WHITE, textdatum_t::top_center);
+  for (auto &p : pops) if (p.t > 0) ui::popText((int)p.x, (int)p.y, p.s, p.col);
   char b[32];
   if (state != TITLE) {
     snprintf(b, sizeof b, "%lu", (unsigned long)score); txtO(b, 5, 2, &fonts::Font4, rgb(30, 50, 120), TFT_WHITE);
@@ -198,12 +198,8 @@ static void render() {
     txt("SLALOM", SCR_W / 2, 22, &fonts::Font4, rgb(30, 50, 140), textdatum_t::top_center, 1.3f);
     if (best > 0) { snprintf(b, sizeof b, L("best %lu","record %lu"), (unsigned long)best); txt(b, SCR_W / 2, 102, &fonts::Font0, rgb(200, 90, 30), textdatum_t::top_center); }
   }
-  if (state == PAUSED) txtO("PAUSE", SCR_W / 2, 52, &fonts::Font4, rgb(30, 50, 120), TFT_WHITE, textdatum_t::top_center);
-  if (state == OVER) {
-    canvas.fillRoundRect(34, 34, 172, 66, 6, rgb(255, 255, 255)); canvas.drawRoundRect(34, 34, 172, 66, 6, rgb(230, 70, 60));
-    txt(L("FINISHED!","TERMINE !"), SCR_W / 2, 38, &fonts::Font4, rgb(230, 70, 60), textdatum_t::top_center);
-    snprintf(b, sizeof b, L("score %lu  best %lu","score %lu  record %lu"), (unsigned long)score, (unsigned long)best); txt(b, SCR_W / 2, 66, &fonts::Font2, rgb(40, 50, 90), textdatum_t::top_center);
-  }
+  if (state == PAUSED) ui::pause();
+  if (state == OVER) ui::gameOver(L("FINISHED!", "TERMINE !"), score, best, (score) > 0 && (uint32_t)(score) >= (uint32_t)(best));
 }
 
 void loop() {
@@ -216,6 +212,7 @@ void loop() {
         case PLAY: if (p) { state = PAUSED; sfx(440, 50); } break;
     case PAUSED: if (p || a) { state = PLAY; sfx(660, 50); } break;
     case OVER: if (a && endT > 40) { reset(); state = PLAY; sfx(660, 40); } break;
+    default: break;
   }
   while (acc >= STEP_US) { step(); acc -= STEP_US; }
   render();
