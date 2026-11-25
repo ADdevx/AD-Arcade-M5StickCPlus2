@@ -94,7 +94,7 @@ static void step() {
   if (state == TITLE || state == OVER || state == PAUSED) { if (state == OVER) endT++; return; }
   if (state == LEVELUP) { endT++; return; }
   tilt::update();
-  float t = tilt::x(); if (fabsf(t) < 0.07f) t = 0; else t = t > 0 ? t - 0.07f : t + 0.07f;
+  float t = ctrl::x(); if (fabsf(t) < 0.07f) t = 0; else t = t > 0 ? t - 0.07f : t + 0.07f;
   float target = t * 7.5f;
   padV += (target - padV) * 0.3f;
   padX += padV; padX = clampf(padX, PAD_W / 2.f, SCR_W - PAD_W / 2.f);

@@ -120,10 +120,17 @@ static void step() {
 
   // ----- vol
   tilt::update();
+  if (g_btnCtrl) {                                   // boutons : A / B pivotent, A+B = poussee
+    bool ba = M5.BtnA.isPressed(), bb = M5.BtnB.isPressed();
+    if (ba && !bb) ang += 0.035f; else if (bb && !ba) ang -= 0.035f;
+    ang = clampf(ang, -0.75f, 0.75f);
+    thrusting = ba && bb && fuel > 0;
+  } else {
   float t = tilt::x(); if (fabsf(t) < 0.05f) t = 0; else t = t > 0 ? t - 0.05f : t + 0.05f;
   float target = clampf(t * 1.5f, -1, 1) * 0.75f;
   float da = clampf((target - ang) * 0.18f, -0.06f, 0.06f); ang += da;
   thrusting = (M5.BtnA.isPressed() || M5.BtnB.isPressed()) && fuel > 0;
+  }
   float ax_ = 0, ay_ = grav;
   if (thrusting) {
     ax_ += sinf(ang) * thrustPow; ay_ -= cosf(ang) * thrustPow; fuel -= 0.1f; if (fuel < 0) fuel = 0; flameT++;

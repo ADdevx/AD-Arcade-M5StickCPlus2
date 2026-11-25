@@ -78,7 +78,7 @@ static void step() {
   if (state == PLAY || state == READY || state == OVER) {
     if (state != OVER) {
       tilt::update();
-      float t = tilt::x(); if (fabsf(t) < 0.07f) t = 0; else t = t > 0 ? t - 0.07f : t + 0.07f;
+      float t = ctrl::x(); if (fabsf(t) < 0.07f) t = 0; else t = t > 0 ? t - 0.07f : t + 0.07f;
       sv += (t * 4.0f - sv) * 0.22f;
       sx = clampf(sx + sv, 10, SCR_W - 10);
     }

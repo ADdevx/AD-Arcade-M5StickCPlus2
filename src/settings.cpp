@@ -6,10 +6,10 @@
 
 namespace settings {
 
-static const int NROWS = 13, VIS = 6;
-enum { R_BRI, R_VOL, R_MUS, R_DIFF, R_SKIN, R_THEME, R_SLEEP, R_STAB, R_CAL, R_LANG, R_DATE, R_ABOUT, R_BACK };
-static const char* ROWS_EN[NROWS] = {"Brightness", "Volume", "Game music", "Difficulty", "Skin", "Theme", "Sleep", "Stabilize", "Calibrate", "Language", "Date", "About", "Back"};
-static const char* ROWS_FR[NROWS] = {"Luminosite", "Volume", "Musique jeux", "Difficulte", "Apparence", "Theme", "Veille", "Stabiliser", "Calibrage", "Langue", "Date", "A propos", "Retour"};
+static const int NROWS = 15, VIS = 6;
+enum { R_BRI, R_VOL, R_MUS, R_CTRL, R_SCREEN, R_DIFF, R_SKIN, R_THEME, R_SLEEP, R_STAB, R_CAL, R_LANG, R_DATE, R_ABOUT, R_BACK };
+static const char* ROWS_EN[NROWS] = {"Brightness", "Volume", "Game music", "Controls", "Screen", "Difficulty", "Skin", "Theme", "Sleep", "Stabilize", "Calibrate", "Language", "Date", "About", "Back"};
+static const char* ROWS_FR[NROWS] = {"Luminosite", "Volume", "Musique jeux", "Commandes", "Ecran", "Difficulte", "Apparence", "Theme", "Veille", "Stabiliser", "Calibrage", "Langue", "Date", "A propos", "Retour"};
 static const char* DIFF_EN[3] = {"EASY", "NORMAL", "HARD"}, *DIFF_FR[3] = {"FACILE", "NORMAL", "DIFFICILE"};
 static int skView = 0;
 static const char* SLEEPS_EN[5] = {"30 s", "1 min", "2 min", "5 min", "never"};
@@ -48,6 +48,8 @@ static void render() {
     if (i == R_BRI) bars(vx - 45, y + 2, 5, g_bright + 1, P_G);
     else if (i == R_VOL) { bars(vx - 45, y + 2, 5, g_vol, P_S); if (g_vol == 0) txt(L("OFF", "MUET"), vx - 50, y, &fonts::Font2, P_R, textdatum_t::top_right); }
     else if (i == R_MUS) toggle(vx - 30, y + 2, g_music);
+    else if (i == R_CTRL) { static const char* CE[3] = {"ASK", "TILT", "BUTTONS"}; static const char* CF[3] = {"DEMANDER", "INCLINAISON", "BOUTONS"}; txt((g_lang ? CF : CE)[g_ctrl], vx, y, &fonts::Font2, P_K, textdatum_t::top_right); }
+    else if (i == R_SCREEN) txt(g_flip ? L("FLIPPED", "RETOURNE") : L("NORMAL", "NORMAL"), vx, y, &fonts::Font2, g_flip ? P_R : P_K, textdatum_t::top_right);
     else if (i == R_DIFF) { uint16_t dc = g_diff == 0 ? P_D : (g_diff == 1 ? P_K : P_R); txt((g_lang ? DIFF_FR : DIFF_EN)[g_diff], vx, y, &fonts::Font2, dc, textdatum_t::top_right); }
     else if (i == R_SKIN) {
       bool ok = skin::unlocked(skView);
@@ -188,6 +190,8 @@ void loop() {
         case R_BRI: g_bright = (g_bright + 1) % 5; applyBrightness(); saveSettings(); sfx(1100, 20); break;
         case R_VOL: g_vol = (g_vol + 1) % 6; applyVolume(); saveSettings(); sfx(1100, 40); sfx(1500, 60, false); break;
         case R_MUS: g_music = !g_music; saveSettings(); sfx(1100, 40); sfx(1500, 60, false); break;
+        case R_CTRL: g_ctrl = (g_ctrl + 1) % 3; saveSettings(); sfx(1100, 20); sfx(1400, 30, false); break;
+        case R_SCREEN: g_flip = !g_flip; applyRotation(); saveSettings(); sfx(1100, 40); sfx(1500, 60, false); break;
         case R_DIFF: g_diff = (g_diff + 1) % 3; saveSettings(); sfx(1000 + g_diff * 250, 40); sfx(1400 + g_diff * 250, 50, false); break;
         case R_SKIN: skView = (skView + 1) % skin::count(); if (skin::unlocked(skView)) { g_skin = skView; saveSettings(); sfx(1100, 20); sfx(1500, 30, false); } else sfx(300, 70); break;
         case R_THEME: g_theme = (g_theme + 1) % themeCount(); saveSettings(); sfx(1100, 20); sfx(1400, 30, false); break;
