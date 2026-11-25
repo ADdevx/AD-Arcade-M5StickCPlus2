@@ -3,6 +3,9 @@
 //  Menu facon console + jeux. Menu : B (cote) = suivant, HAUT (PWR) = precedent, M5 (A) = lancer
 //  Dans un jeu : maintenir HAUT (PWR) 1,5 s = retour au menu
 // ============================================================================
+#ifdef AD_CARDPUTER
+#include <M5Cardputer.h>
+#endif
 #include "common.h"
 
 M5Canvas canvas(&M5.Display);
@@ -15,6 +18,9 @@ int  g_theme = 0;                             // theme de couleurs du menu
 int  g_lang = 0;                              // 0 = English, 1 = Francais
 int  g_vol = 3;                               // volume 0..5
 int  g_diff = 1;                              // 0 facile, 1 normal, 2 difficile
+int g_kbdX = 0, g_kbdY = 0;
+bool g_noIntro = false, g_crt = false, g_invert = false, g_rainbow = false, g_fps = false;
+bool g_unlockAll = false;                     // mode admin
 int  g_skin = 0;                              // apparence du heros
 uint32_t g_rngState = 1; bool g_rngSeeded = false;
 bool g_quit = false;
@@ -25,7 +31,7 @@ static Preferences mp;
 static const int VOLS[6] = {0, 40, 80, 140, 200, 255};
 void applyBrightness() { M5.Display.setBrightness(BRI[g_bright]); }
 void applyVolume() { g_sound = g_vol > 0; M5.Speaker.setVolume(VOLS[g_vol]); }
-void saveSettings() { mp.putInt("bri", g_bright); mp.putInt("vol", g_vol); mp.putBool("snd", g_sound); mp.putBool("mus", g_music); mp.putInt("slp", g_sleepIdx); mp.putInt("lang", g_lang); mp.putInt("theme", g_theme); mp.putInt("diff", g_diff); mp.putInt("skin", g_skin); }
+void saveSettings() { mp.putInt("bri", g_bright); mp.putInt("vol", g_vol); mp.putBool("snd", g_sound); mp.putBool("mus", g_music); mp.putInt("slp", g_sleepIdx); mp.putInt("lang", g_lang); mp.putInt("theme", g_theme); mp.putInt("diff", g_diff); mp.putInt("skin", g_skin); mp.putBool("unl", g_unlockAll); mp.putBool("ni", g_noIntro); mp.putBool("crt", g_crt); mp.putBool("inv", g_invert); mp.putBool("rbw", g_rainbow); }
 
 // ----------------------------------------------------------------------------- skins (apparences du heros)
 namespace skin {
@@ -42,11 +48,20 @@ static const Sk SK[] = {
 int count() { return sizeof(SK) / sizeof(SK[0]); }
 const char* name(int i) { return g_lang ? SK[i].fr : SK[i].en; }
 int need(int i) { return SK[i].need; }
-bool unlocked(int i) { return trophy::total() >= SK[i].need; }
+bool unlocked(int i) { return g_unlockAll || trophy::total() >= SK[i].need; }
 uint16_t c(int slot, uint16_t def) { if (g_skin <= 0 || g_skin >= count()) return def; const uint8_t* k = SK[g_skin].col[slot & 3]; return rgb(k[0], k[1], k[2]); }
 }
+void applyFx() { M5.Display.invertDisplay(g_invert); }
+
+struct Conf { float x, y, vx, vy; uint16_t c; int t; };
+static Conf cf[48];
+void confetti() { static const uint16_t C[5] = {P_R, P_G, P_S, P_B, P_L}; for (auto &p : cf) p = {(float)rnd(10, SCR_W - 10), (float)rnd(-40, 0), rnd(-10, 10) / 10.f, rnd(8, 20) / 10.f, C[rnd(0, 4)], (int)rnd(60, 160)}; }
+
 void present(int ox, int oy) {
   trophy::banner(); session::overlay();
+  for (auto &p : cf) if (p.t > 0) { p.t--; p.x += p.vx + sinf(p.y * 0.2f) * 0.4f; p.y += p.vy; if (p.y > SCR_H) p.t = 0; canvas.fillRect((int)p.x, (int)p.y, 3, 3, P_K); canvas.fillRect((int)p.x, (int)p.y, 2, 2, p.c); }
+  if (g_crt) for (int y = 1; y < SCR_H; y += 3) canvas.drawFastHLine(0, y, SCR_W, P_K);
+  if (g_fps) { static uint32_t t0 = 0; static int n = 0, fps = 0; n++; if (millis() - t0 >= 1000) { fps = n; n = 0; t0 = millis(); } char b[8]; snprintf(b, sizeof b, "%d", fps); canvas.fillRect(SCR_W - 20, 0, 20, 9, P_K); txt(b, SCR_W - 2, 1, &fonts::Font0, P_S, textdatum_t::top_right); }
   static float z = -1;
   if (z < 0) { int w = M5.Display.width(), h = M5.Display.height(); if (w < h) { int t = w; w = h; h = t; } z = (w >= SCR_W && h >= SCR_H) ? 0 : fminf((float)w / SCR_W, (float)h / SCR_H); }
   if (z == 0) canvas.pushSprite(ox, oy);
@@ -62,10 +77,24 @@ static bool g_pwrHold = false;   // vrai une frame quand l'utilisateur demande "
 //  - Nesso N1 : pas de 3e bouton, un doigt sur l'ecran joue le role de PWR.
 //  - Tous : A+B maintenus ~1,2 s = retour au menu (marche meme si PWR ne peut pas etre maintenu).
 void btnUpdate() {
+#ifdef AD_CARDPUTER
+  M5Cardputer.update();
+#else
   M5.update();
+#endif
   uint32_t now = millis();
   g_pwrHold = false;
-#if defined(CONFIG_IDF_TARGET_ESP32C6)
+#if defined(AD_CARDPUTER)
+  {                                                                                        // Cardputer : le clavier joue le role des boutons et du tilt
+    auto &kb = M5Cardputer.Keyboard;
+    bool kA = kb.isKeyPressed((char)KEY_ENTER) || kb.isKeyPressed(' ');
+    bool kB = kb.isKeyPressed((char)KEY_TAB);
+    bool kP = kb.isKeyPressed((char)KEY_BACKSPACE) || kb.isKeyPressed('`');
+    g_kbdX = (kb.isKeyPressed('/') ? 1 : 0) - (kb.isKeyPressed(',') ? 1 : 0);
+    g_kbdY = (kb.isKeyPressed('.') ? 1 : 0) - (kb.isKeyPressed(';') ? 1 : 0);
+    M5.BtnA.setRawState(now, M5.BtnA.isPressed() || kA); M5.BtnB.setRawState(now, kB); M5.BtnPWR.setRawState(now, kP);
+  }
+#elif defined(CONFIG_IDF_TARGET_ESP32C6)
   M5.BtnPWR.setRawState(now, M5.Touch.getCount() > 0);
 #else
   bool pmicBtn = false;
@@ -105,11 +134,13 @@ static const GameDef GAMES[] = {
   {"TETRIS",         "TETRIS",         tetris::begin,   tetris::loop,   tetris::icon},
   {"SNAKE",          "SNAKE",          snake::begin,    snake::loop,    snake::icon},
   {"LUNAR LANDER",   "ALUNISSAGE",     lander::begin,   lander::loop,   lander::icon},
+  {"EMBERWOOD",      "EMBERWOOD",      zelda::begin,    zelda::loop,    zelda::icon},
   {"DAILY",          "DEFI DU JOUR",   daily::begin,    daily::loop,    daily::icon},
-  {"1-2 PLAYERS",    "1-2 JOUEURS",      duo::begin,      duo::loop,      duo::icon},
+  {"2 PLAYERS",      "2 JOUEURS",        duo::begin,      duo::loop,      duo::icon},
   {"TROPHIES",       "TROPHEES",       trophy::begin,   trophy::loop,   trophy::icon},
   {"STATS",          "STATS",          stats::begin,    stats::loop,    stats::icon},
   {"MUSIC",          "MUSIQUE",        music::begin,    music::loop,    music::icon},
+  {"SKINS",          "SKINS",          skins::begin,    skins::loop,    skins::icon},
   {"SETTINGS",       "REGLAGES",       settings::begin, settings::loop, settings::icon},
 };
 static const int NGAMES = sizeof(GAMES) / sizeof(GAMES[0]);
@@ -124,15 +155,15 @@ static int saver = 0;                         // 0 = normal, 1 = veille (animati
 static int batLevel = 100; static bool batChg = false; static uint32_t batT = 0;
 
 // ----------------------------------------------------------------------------- menu
-static void dim(int x, int y) { for (int j = 0; j < 64; j += 2) canvas.drawFastHLine(x, y + j, 64, rgb(10, 10, 18)); }
+static void dim(int x, int y) { for (int j = 0; j < 64; j += 2) canvas.drawFastHLine(x, y + j, 64, P_K); }      // trame sombre : tuile non selectionnee
 
-static void drawBattery(int x, int y, int lvl, bool chg) {            // petite pile facon telephone + pourcentage
-  uint16_t col = lvl <= 15 ? rgb(235, 60, 60) : (lvl <= 35 ? rgb(250, 190, 40) : rgb(90, 220, 110));
-  canvas.drawRoundRect(x, y, 22, 11, 3, rgb(220, 224, 240)); canvas.fillRect(x + 22, y + 3, 2, 5, rgb(220, 224, 240));
-  int w = (lvl * 18) / 100; if (w < 1 && lvl > 0) w = 1;
-  canvas.fillRoundRect(x + 2, y + 2, w, 7, 2, col);
-  if (chg) { canvas.fillTriangle(x + 12, y + 1, x + 7, y + 6, x + 11, y + 6, rgb(255, 255, 255)); canvas.fillTriangle(x + 10, y + 5, x + 14, y + 5, x + 9, y + 10, rgb(255, 255, 255)); }
-  char b[8]; snprintf(b, sizeof b, "%d%%", lvl); txt(b, x + 28, y + 1, &fonts::Font0, rgb(220, 224, 240));
+static void drawBattery(int x, int y, int lvl, bool chg) {            // pile pixel art : 4 segments + pourcentage
+  uint16_t col = lvl <= 15 ? P_R : (lvl <= 35 ? P_G : P_S);
+  canvas.fillRect(x, y, 22, 11, P_K); canvas.fillRect(x + 22, y + 3, 3, 5, P_K); canvas.fillRect(x + 1, y + 1, 20, 9, P_B);
+  int seg = (lvl + 12) / 25; if (seg > 4) seg = 4; if (seg < 1 && lvl > 0) seg = 1;
+  for (int i = 0; i < seg; i++) canvas.fillRect(x + 2 + i * 5, y + 2, 4, 7, col);
+  if (chg) { canvas.fillTriangle(x + 12, y + 1, x + 7, y + 6, x + 11, y + 6, P_K); canvas.fillTriangle(x + 10, y + 5, x + 14, y + 5, x + 9, y + 10, P_K); }
+  char b[8]; snprintf(b, sizeof b, "%d%%", lvl); txt(b, x + 28, y + 2, &fonts::Font0, P_B, textdatum_t::top_left);
 }
 
 static uint16_t rainbow(int h) {
@@ -147,7 +178,7 @@ static void initStars() { for (auto &s : stars) s = {(float)rnd(0, SCR_W), (floa
 static uint32_t toastT = 0; static bool adapted = false;                                    // message "FLAT / UPRIGHT" apres une (re)stabilisation
 static const uint16_t ACC_RGB[21][3] = {                       // couleur d'ambiance de chaque entree
   {120,200,120},{250,210,60},{120,160,255},{110,220,200},{250,120,90},{120,230,130},{90,190,255},{255,170,70},{240,70,70},{90,170,255},{70,200,230},{70,150,255},{170,90,240},{90,220,90},{200,200,220},{255,150,60},{90,220,170},{255,200,60},{120,210,255},{255,110,190},{170,176,200}};
-static uint16_t accOf(int idx) { const uint16_t* c = ACC_RGB[idx % 21]; return rgb(c[0], c[1], c[2]); }
+[[maybe_unused]] static uint16_t accOf(int idx) { const uint16_t* c = ACC_RGB[idx % 21]; return rgb(c[0], c[1], c[2]); }
 
 // ----------------------------------------------------------------------------- themes de couleurs du menu
 struct Theme { const char* en; const char* fr; uint8_t acc[3], top[3], bot[3], mtnFar[3], mtnNear[3], ground[3]; };
@@ -164,99 +195,52 @@ int  themeCount() { return sizeof(THEMES) / sizeof(THEMES[0]); }
 const char* themeName(int i) { return g_lang ? THEMES[i].fr : THEMES[i].en; }
 static inline uint16_t thc(const uint8_t* c) { return rgb(c[0], c[1], c[2]); }
 
-static void drawBackdrop(uint16_t acc) {                       // ciel degrade + aurore + etoiles + montagnes + sol en grille
-  uint32_t t = millis();
-  for (int y = 0; y < 84; y += 3) canvas.fillRect(0, y, SCR_W, 3, mixc(mixc(thc(THEMES[g_theme].top), acc, 22), mixc(thc(THEMES[g_theme].bot), acc, 40), y * 256 / 84));
-  for (int i = 0; i < 3; i++) {                                // bandes d'aurore ondulantes
-    for (int x = 0; x < SCR_W; x += 4) {
-      int yy = 26 + i * 14 + (int)(sinf(x * 0.035f + t * 0.0012f * (i + 1) + i * 2.0f) * 9);
-      canvas.fillRect(x, yy, 4, 5 + i, mixc(rgb(14, 12, 40), mixc(acc, rainbow((int)(t / 40) + i * 40 + x / 3), 120), 80 + i * 20));
-    }
-  }
-  if (!starsInit) initStars();
-  for (auto &s2 : stars) {
-    s2.x -= s2.v * 0.6f; if (s2.x < 0) { s2.x += SCR_W; s2.y = rnd(0, 80); }
-    int tw = ((int)(t / 130) + (int)s2.x) % 9 == 0;
-    uint16_t c = tw ? rgb(255, 255, 255) : (s2.v > 0.8f ? rgb(230, 230, 255) : (s2.v > 0.45f ? rgb(170, 170, 220) : rgb(100, 100, 150)));
-    canvas.drawPixel((int)s2.x, (int)s2.y % 82, c); if (s2.v > 0.8f) canvas.drawPixel((int)s2.x + 1, (int)s2.y % 82, c);
-  }
-  for (int layer = 0; layer < 2; layer++) {                    // montagnes lointaines (parallaxe)
-    uint16_t mc = layer ? mixc(thc(THEMES[g_theme].mtnNear), acc, 26) : mixc(thc(THEMES[g_theme].mtnFar), acc, 14);
-    for (int x = 0; x < SCR_W; x += 2) {
-      float wx = x + t * (layer ? 0.010f : 0.004f);
-      int h = (int)(10 + layer * 6 + sinf(wx * 0.045f + layer * 2.2f) * 7 + sinf(wx * 0.11f + layer) * 3);
-      canvas.fillRect(x, 84 - h, 2, h + 1, mc);
-    }
-  }
-  canvas.fillRect(0, 84, SCR_W, 19, thc(THEMES[g_theme].ground));          // sol
-  for (int i = 0; i < 7; i++) { float f = (float)((i * 16 + (t / 55) % 16)) / 112.0f; int y = 84 + (int)(f * f * 24); if (y < 103) canvas.drawFastHLine(0, y, SCR_W, mixc(rgb(60, 30, 110), acc, 70)); }
-  for (int i = -8; i <= 8; i++) canvas.drawLine(SCR_W / 2 + i * 6, 84, SCR_W / 2 + i * 26, 103, mixc(rgb(50, 26, 96), acc, 60));
-  canvas.drawFastHLine(0, 84, SCR_W, mixc(rgb(120, 70, 200), acc, 120));
-}
-
-static void haloRays(int cx, int cy, uint16_t acc, uint32_t t) {   // rayons qui tournent derriere l'icone choisie
-  float a0 = t * 0.0006f;
-  for (int i = 0; i < 12; i++) {
-    float a1 = a0 + i * 0.5236f, a2 = a1 + 0.2618f;
-    canvas.fillTriangle(cx, cy, cx + (int)(cosf(a1) * 130), cy + (int)(sinf(a1) * 130), cx + (int)(cosf(a2) * 130), cy + (int)(sinf(a2) * 130), mixc(rgb(26, 16, 60), acc, 64));
-  }
-}
 
 static void drawMenu() {
   uint32_t t = millis();
-  float fs = slide;                                            // couleur d'ambiance : fondu pendant le defilement
-  uint16_t acc = mixc(accOf(sel), accOf(sel - (slide > 0 ? 1 : (slide < 0 ? -1 : 0)) + NGAMES), (int)(fabsf(fs) * 200));
-  if (g_theme) acc = thc(THEMES[g_theme].acc);
-  drawBackdrop(acc);
-  haloRays(SCR_W / 2, 56, acc, t);
+  static const uint16_t PALA[4] = {P_S, P_G, P_R, P_B};
+  uint16_t acc = g_rainbow ? PALA[(t / 140) & 3] : (g_theme ? thc(THEMES[g_theme].acc) : PALA[sel & 3]);
+  ui::bg((int)(t / (g_rainbow ? 12 : 50)));
   // --- barre du haut
-  for (int y = 0; y < 19; y++) canvas.drawFastHLine(0, y, SCR_W, mixc(rgb(24, 20, 56), rgb(8, 6, 24), y * 14));
-  { uint16_t rb = rainbow((int)(t / 12)); canvas.drawFastHLine(0, 19, SCR_W, rb); canvas.drawFastHLine(0, 20, SCR_W, mixc(rb, 0, 190)); }
-  drawBattery(5, 4, batLevel, batChg);
-  { const char* T = "AD ARCADE"; int n = 9, x0 = SCR_W / 2 - 40 + 6;                    // titre : lettres en degrade qui ondulent
-    for (int i = 0; i < n; i++) { char ch[2] = {T[i], 0}; int yy = 2 + (int)(sinf(t * 0.006f + i * 0.7f) * 1.2f);
-      txt(ch, x0 + i * 9 + 1, yy + 1, &fonts::Font2, rgb(40, 10, 40)); txt(ch, x0 + i * 9, yy, &fonts::Font2, mixc(rgb(255, 230, 90), rgb(255, 120, 200), i * 32 + 20)); } }
-  char b[10]; snprintf(b, sizeof b, "%d/%d", sel + 1, NGAMES); txt(b, SCR_W - 5, 6, &fonts::Font0, rgb(170, 180, 220), textdatum_t::top_right);
+  canvas.fillRect(0, 0, SCR_W, 21, P_K); canvas.fillRect(0, 0, SCR_W, 19, P_D); canvas.fillRect(0, 0, SCR_W, 1, P_M); canvas.fillRect(0, 19, SCR_W, 1, P_G);
+  drawBattery(4, 4, batLevel, batChg);
+  { const char* T = "AD ARCADE"; txt(T, SCR_W / 2 + 22, 3, &fonts::Font4, P_R, textdatum_t::top_center); txtO(T, SCR_W / 2 + 21, 2, &fonts::Font4, P_G, P_K, textdatum_t::top_center); }
+  char b[24]; snprintf(b, sizeof b, "%d/%d", sel + 1, NGAMES); txt(b, SCR_W - 4, 6, &fonts::Font0, P_B, textdatum_t::top_right);
   // --- carrousel
   float pulse = (sinf(t * 0.008f) + 1) * 0.5f;
   for (int d = -1; d <= 1; d++) {
     int idx = (sel + d + NGAMES) % NGAMES;
     float px = SCR_W / 2 - 32 + (d - slide) * 82;
-    int ix = (int)px, iy = 24 + (d == 0 ? (int)(sinf(t * 0.006f) * 2) : 7);
+    int ix = (int)px, iy = 28 + (d == 0 ? (((t / 260) & 1) ? 0 : -1) : 5);
     if (ix > SCR_W || ix < -64) continue;
     float cen = 1.0f - fminf(1.0f, fabsf(d - slide));            // 1 = pile au centre
-    canvas.fillEllipse(ix + 32, 97, 26 + (int)(cen * 6), 3, rgb(6, 4, 16));                 // ombre au sol
-    if (cen > 0.05f) {
-      uint16_t gl = mixc(rgb(30, 20, 60), acc, 80 + (int)(pulse * 90 * cen));
-      canvas.fillRoundRect(ix - 8, iy - 8, 80, 80, 13, mixc(rgb(20, 12, 44), gl, (int)(cen * 200)));
-      canvas.fillRoundRect(ix - 5, iy - 5, 74, 74, 10, mixc(acc, 0xFFFF, 70 + (int)(pulse * 60)));
-      canvas.fillRoundRect(ix - 3, iy - 3, 70, 70, 8, rgb(16, 12, 34));
-      for (int k = 0; k < 6; k++) {                              // petites perles qui courent autour du cadre
-        float a = t * 0.004f + k * 1.0472f; int bx = ix + 32 + (int)(cosf(a) * 41), by = iy + 32 + (int)(sinf(a) * 41);
-        bx = bx < ix - 5 ? ix - 5 : (bx > ix + 69 ? ix + 69 : bx); by = by < iy - 5 ? iy - 5 : (by > iy + 69 ? iy + 69 : by);
-        canvas.fillCircle(bx, by, 1, rgb(255, 255, 255));
-      }
+    canvas.fillRect(ix + 6, 98, 52, 3, P_K);                      // ombre au sol
+    if (cen > 0.5f) {
+      canvas.fillRect(ix - 6, iy - 6, 76, 76, P_K);               // cadre : noir, couleur d'ambiance, noir
+      canvas.fillRect(ix - 5, iy - 5, 74, 74, pulse > 0.5f ? acc : P_B);
+      canvas.fillRect(ix - 2, iy - 2, 68, 68, P_K);
+      canvas.fillRect(ix - 5, iy - 5, 74, 1, P_B);
+      for (int k = 0; k < 4; k++) { int cx = ix - 6 + (k & 1) * 74, cy = iy - 6 + (k >> 1) * 74; canvas.fillRect(cx - 1, cy - 1, 4, 4, P_K); canvas.fillRect(cx, cy, 2, 2, P_G); }
     }
     GAMES[idx].icon(ix, iy);
     if (cen < 0.5f) dim(ix, iy);
-    if (cen > 0.05f) { canvas.drawFastHLine(ix + 4, iy + 1, 20, mixc(0xFFFF, 0, 120)); }   // reflet
   }
-  uint16_t ar = mixc(rgb(255, 210, 80), 0xFFFF, (int)(pulse * 140));
-  canvas.fillTriangle(6, 58, 15, 50, 15, 66, ar); canvas.fillTriangle(SCR_W - 6, 58, SCR_W - 15, 50, SCR_W - 15, 66, ar);
-  // --- bandeau du bas : nom + pagination
-  for (int y = 103; y < SCR_H; y++) canvas.drawFastHLine(0, y, SCR_W, mixc(rgb(26, 18, 56), rgb(8, 6, 22), (y - 103) * 8));
-  canvas.drawFastHLine(0, 103, SCR_W, mixc(acc, 0xFFFF, 60)); canvas.drawFastHLine(0, 104, SCR_W, mixc(acc, 0, 150));
+  { int bob = (int)((t / 250) & 1); uint16_t ar = P_G;
+    canvas.fillTriangle(3 - bob, 62, 14 - bob, 50, 14 - bob, 74, P_K); canvas.fillTriangle(6 - bob, 62, 13 - bob, 53, 13 - bob, 71, ar);
+    canvas.fillTriangle(SCR_W - 3 + bob, 62, SCR_W - 14 + bob, 50, SCR_W - 14 + bob, 74, P_K); canvas.fillTriangle(SCR_W - 6 + bob, 62, SCR_W - 13 + bob, 53, SCR_W - 13 + bob, 71, ar); }
+  // --- plaque du nom + pagination
   const char* nm = L(GAMES[sel].en, GAMES[sel].fr);
-  txt(nm, SCR_W / 2 + 1, 105, &fonts::Font4, rgb(30, 10, 30), textdatum_t::top_center);
-  txt(nm, SCR_W / 2, 104, &fonts::Font4, TFT_WHITE, textdatum_t::top_center);
+  canvas.fillRect(16, 103, 208, 21, P_K); canvas.fillRect(17, 104, 206, 19, P_B); canvas.fillRect(17, 104, 206, 2, P_L); canvas.fillRect(17, 121, 206, 2, P_L);
+  canvas.fillRect(19, 106, 3, 3, acc); canvas.fillRect(218, 106, 3, 3, acc); canvas.fillRect(19, 118, 3, 3, acc); canvas.fillRect(218, 118, 3, 3, acc);
+  txt(nm, SCR_W / 2 + 1, 106, &fonts::Font4, P_L, textdatum_t::top_center); txt(nm, SCR_W / 2, 105, &fonts::Font4, P_K, textdatum_t::top_center);
   for (int i = 0; i < NGAMES; i++) {                                                     // points de pagination
-    int x = SCR_W / 2 - (NGAMES * 9) / 2 + i * 9 + 3; bool on = i == sel;
-    if (on) canvas.fillRoundRect(x - 2, 130, 8, 3, 1, mixc(acc, 0xFFFF, 100)); else canvas.fillRect(x, 131, 3, 2, rgb(70, 66, 110));
+    int x = SCR_W / 2 - (NGAMES * 9) / 2 + i * 9 + 1; bool on = i == sel;
+    canvas.fillRect(x, 127, on ? 6 : 4, on ? 6 : 4, P_K); canvas.fillRect(x + 1, 128, on ? 4 : 2, on ? 4 : 2, on ? acc : P_M);
   }
   if (toastT && t - toastT < 2200) {                                                     // posture detectee par le gyroscope
-    bool flat = tilt::posture() == 0; int w = 84;
-    canvas.fillRoundRect(SCR_W / 2 - w / 2, 23, w, 15, 6, rgb(10, 8, 26)); canvas.drawRoundRect(SCR_W / 2 - w / 2, 23, w, 15, 6, acc);
-    txt(flat ? L("FLAT MODE", "MODE A PLAT") : L("UPRIGHT MODE", "MODE DEBOUT"), SCR_W / 2, 26, &fonts::Font0, TFT_WHITE, textdatum_t::top_center);
+    bool flat = tilt::posture() == 0; int w = 94;
+    canvas.fillRect(SCR_W / 2 - w / 2, 23, w, 15, P_K); canvas.fillRect(SCR_W / 2 - w / 2 + 1, 24, w - 2, 13, P_B);
+    txt(flat ? L("FLAT MODE", "MODE A PLAT") : L("UPRIGHT MODE", "MODE DEBOUT"), SCR_W / 2, 27, &fonts::Font0, P_K, textdatum_t::top_center);
   }
 }
 
@@ -280,7 +264,7 @@ static void toMenu() {
 
 // ----------------------------------------------------------------------------- intro facon demo scene des annees 90
 static void intro() {
-  const char* SCROLL = "     WELCOME TO AD ARCADE ***  15 GAMES IN YOUR POCKET ***  TILT  PRESS  PLAY ***  "
+  const char* SCROLL = "     WELCOME TO AD ARCADE ***  16 GAMES IN YOUR POCKET ***  TILT  PRESS  PLAY ***  "
                        "TETRIS  SNAKE  LUNAR LANDER  FLAP BIRD  RACING  FLIGHT  AND MORE ***  "
                        "25 FAMOUS TUNES TO PLAY ***  CODED ON AN ESP32 WITH LOVE ***  GREETINGS TO ALL M5 FANS ***  ENJOY !!!     ";
   const int SL = strlen(SCROLL);
@@ -336,7 +320,11 @@ static void intro() {
 
 void setup() {
   auto cfg = M5.config();
+#ifdef AD_CARDPUTER
+  M5Cardputer.begin(cfg, true);
+#else
   M5.begin(cfg);
+#endif
   if (M5.getBoard() == m5::board_t::board_M5StickCPlus2) { pinMode(4, OUTPUT); digitalWrite(4, HIGH); }   // maintien de l'alimentation (StickC Plus2 uniquement)
   M5.Display.setRotation(SCR_ROT);
   mp.begin("arcade", false);
@@ -344,6 +332,7 @@ void setup() {
   g_bright = mp.getInt("bri", 2); if (g_bright < 0 || g_bright > 4) g_bright = 2;
   g_vol = mp.isKey("vol") ? mp.getInt("vol", 3) : (mp.getBool("snd", true) ? 3 : 0); if (g_vol < 0 || g_vol > 5) g_vol = 3;
   g_diff = mp.getInt("diff", 1); if (g_diff < 0 || g_diff > 2) g_diff = 1;
+  g_unlockAll = mp.getBool("unl", false); g_noIntro = mp.getBool("ni", false); g_crt = mp.getBool("crt", false); g_invert = mp.getBool("inv", false); g_rainbow = mp.getBool("rbw", false); applyFx();
   g_skin = mp.getInt("skin", 0); if (g_skin < 0 || g_skin >= skin::count()) g_skin = 0;
   g_music = mp.getBool("mus", true);
   g_lang = mp.getInt("lang", 0) ? 1 : 0; g_theme = mp.getInt("theme", 0); if (g_theme < 0 || g_theme >= themeCount()) g_theme = 0;
@@ -354,15 +343,16 @@ void setup() {
   canvas.createSprite(SCR_W, SCR_H);
   tilt::load();
   if (g_skin && !skin::unlocked(g_skin)) g_skin = 0;                    // securite : apparence non debloquee
-  intro();
-  if (tilt::valid()) { tilt::zero(); toastT = millis(); }             // stabilisation unique : la position tenue au demarrage = "a plat" pour tous les jeux
-  else tilt::startCalibration();               // premier demarrage : assistant d'inclinaison
+  if (!g_noIntro) intro();
+  if (tilt::valid()) { tilt::zero(); if (M5.Imu.isEnabled()) toastT = millis(); }             // stabilisation unique : la position tenue au demarrage = "a plat" pour tous les jeux
+  else wizard::begin();                         // premier demarrage : assistant (langue, calibrage, date + heure)
   lastAct = millis();
 }
 
 void loop() {
   btnUpdate();
   bool anyBtn = M5.BtnA.wasPressed() || M5.BtnB.wasPressed() || M5.BtnPWR.wasPressed();
+  if (wizard::active()) { wizard::loop(); lastAct = millis(); return; }
   if (tilt::calibrating()) { tilt::calibrationStep(); lastAct = millis(); return; }
   if (running >= 0) {
     if (M5.BtnPWR.pressedFor(1500) || g_pwrHold || g_quit) { sfx(440, 60); sfx(330, 90, false); toMenu(); return; }

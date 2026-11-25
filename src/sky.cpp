@@ -431,7 +431,7 @@ static void render() {
       canvas.fillTriangle(cx + (int)(ux * 5), cy + (int)(uy * 5), cx - (int)(ux * 3 + vx2 * 4), cy - (int)(uy * 3 + vy2 * 4), cx - (int)(ux * 3 - vx2 * 4), cy - (int)(uy * 3 - vy2 * 4), c); }
   }
   // infos
-  for (auto &p : pops) if (p.t > 0) txtO(p.s, SCR_W / 2, (int)p.y, &fonts::Font2, p.col, rgb(20, 20, 60), textdatum_t::top_center);
+  for (auto &p : pops) if (p.t > 0) ui::popText(SCR_W / 2, (int)p.y, p.s, p.col);
   char b[32];
   if (state == PLAY || state == PAUSED || state == OVER) {
     snprintf(b, sizeof b, "%lu", (unsigned long)score); txtO(b, 5, 2, &fonts::Font4, TFT_WHITE, rgb(20, 20, 70));
@@ -450,12 +450,8 @@ static void render() {
     txt(L("FLIGHT","AVION"), SCR_W / 2, 18, &fonts::Font4, rgb(30, 50, 140), textdatum_t::top_center, 1.3f);
     if (best > 0) { snprintf(b, sizeof b, L("best %lu","record %lu"), (unsigned long)best); txt(b, SCR_W / 2, 52, &fonts::Font0, rgb(200, 90, 30), textdatum_t::top_center); }
   }
-  if (state == PAUSED) txtO("PAUSE", SCR_W / 2, 52, &fonts::Font4, TFT_WHITE, rgb(20, 20, 70), textdatum_t::top_center);
-  if (state == OVER) {
-    canvas.fillRoundRect(34, 30, 172, 66, 6, rgb(255, 255, 255)); canvas.drawRoundRect(34, 30, 172, 66, 6, rgb(230, 70, 60));
-    txt("CRASH !", SCR_W / 2, 34, &fonts::Font4, rgb(230, 70, 60), textdatum_t::top_center);
-    snprintf(b, sizeof b, L("score %lu  best %lu","score %lu  record %lu"), (unsigned long)score, (unsigned long)best); txt(b, SCR_W / 2, 66, &fonts::Font2, rgb(40, 50, 90), textdatum_t::top_center);
-  }
+  if (state == PAUSED) ui::pause();
+  if (state == OVER) ui::gameOver("CRASH !", score, best, (score) > 0 && (uint32_t)(score) >= (uint32_t)(best));
 }
 
 void loop() {

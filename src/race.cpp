@@ -306,19 +306,14 @@ static void render() {
     }
   }
   if (boosting) for (int i = 0; i < 6; i++) { int lx = ROAD_L + 10 + (i * 41 + animT * 7) % (ROAD_R - ROAD_L - 20), ly = (i * 29 + animT * 11) % SCR_H; canvas.drawFastVLine(lx, ly, 10, rgb(200, 210, 240)); }
-  for (auto &p : pops) if (p.t > 0) txtO(p.s, (int)p.x, (int)p.y, &fonts::Font2, p.col, rgb(0, 0, 0), textdatum_t::top_center);
+  for (auto &p : pops) if (p.t > 0) ui::popText((int)p.x, (int)p.y, p.s, p.col);
   char b[24];
   snprintf(b, sizeof b, "%lu", (unsigned long)score); txtO(b, 5, 2, &fonts::Font4, TFT_WHITE, rgb(10, 10, 20));
   for (int i = 0; i < lives; i++) { int hx = SCR_W - 10 - i * 12; canvas.fillTriangle(hx - 4, 6, hx + 4, 6, hx, 13, rgb(235, 50, 60)); canvas.fillCircle(hx - 2, 5, 2, rgb(235, 50, 60)); canvas.fillCircle(hx + 2, 5, 2, rgb(235, 50, 60)); }
   snprintf(b, sizeof b, "%d", (int)(spd * 45)); txtO(b, SCR_W - 6, 108, &fonts::Font4, TFT_WHITE, rgb(10, 10, 20), textdatum_t::top_right); txtO("km/h", SCR_W - 6, 126, &fonts::Font0, TFT_WHITE, rgb(10, 10, 20), textdatum_t::top_right);
   canvas.drawRect(5, 122, 52, 8, rgb(230, 230, 240)); canvas.fillRect(6, 123, (int)(50 * nitro), 6, boosting ? rgb(80, 180, 255) : rgb(60, 130, 230));
-  if (state == PAUSED) { canvas.fillRoundRect(80, 50, 80, 28, 5, rgb(10, 12, 28)); txt("PAUSE", SCR_W / 2, 54, &fonts::Font4, TFT_WHITE, textdatum_t::top_center); }
-  if (state == OVER) {
-    canvas.fillRoundRect(36, 28, 168, 62, 6, rgb(10, 12, 28)); canvas.drawRoundRect(36, 28, 168, 62, 6, rgb(235, 60, 70));
-    txt(L("CRASH!","ACCIDENT !"), SCR_W / 2, 32, &fonts::Font4, rgb(235, 60, 70), textdatum_t::top_center);
-    snprintf(b, sizeof b, L("%lu   best %lu","%lu   record %lu"), (unsigned long)score, (unsigned long)best); txt(b, SCR_W / 2, 60, &fonts::Font2, TFT_WHITE, textdatum_t::top_center);
-    if (endT > 40) txt(L("M5 retry    B garage","M5 rejouer    B garage"), SCR_W / 2, 76, &fonts::Font0, rgb(150, 200, 255), textdatum_t::top_center);
-  }
+  if (state == PAUSED) ui::pause();
+  if (state == OVER) ui::gameOver(L("CRASH!", "ACCIDENT !"), score, best, score > 0 && score >= best, endT > 40 ? L("M5 retry  B garage", "M5 rejouer  B garage") : L("...", "..."));
 }
 
 void loop() {

@@ -143,7 +143,8 @@ static void step() {
   bool hit = false; float lfx = 0, rfx = 0;
   for (int i = 0; i < 5; i++) {
     float px = x + PT[i][0] * ca - PT[i][1] * sa, py = y + PT[i][0] * sa + PT[i][1] * ca;
-    if (i == 0) lfx = px; if (i == 1) rfx = px;
+    if (i == 0) lfx = px;
+    if (i == 1) rfx = px;
     if (py >= gh(px)) hit = true;
   }
   if (!hit) return;
@@ -305,22 +306,10 @@ static void render() {
   if (y < 4) { canvas.fillTriangle((int)sx_ - 5, 40, (int)sx_ + 5, 40, (int)sx_, 34, rgb(255, 224, 120)); }
   char b[32];
   if (state == READY && (stateT / 6) % 4 != 3) { snprintf(b, sizeof b, L("LEVEL %d", "NIVEAU %d"), level); txtO(b, SCR_W / 2, 52, &fonts::Font4, TFT_WHITE, rgb(10, 10, 40), textdatum_t::top_center); }
-  if (state == LANDED) {
-    canvas.fillRoundRect(40, 36, 160, 44, 6, rgb(8, 10, 30)); canvas.drawRoundRect(40, 36, 160, 44, 6, rgb(90, 220, 110));
-    txt(L("LANDED!", "POSE !"), SCR_W / 2, 38, &fonts::Font4, rgb(90, 220, 110), textdatum_t::top_center);
-    snprintf(b, sizeof b, "+%d  (x%d)", gain, padM[lastPad]); txt(b, SCR_W / 2, 62, &fonts::Font2, rgb(255, 224, 120), textdatum_t::top_center);
-  }
-  if (state == CRASH && stateT > 20) {
-    canvas.fillRoundRect(40, 50, 160, 40, 6, rgb(8, 10, 30)); canvas.drawRoundRect(40, 50, 160, 40, 6, rgb(230, 80, 70));
-    txt("CRASH", SCR_W / 2, 53, &fonts::Font4, rgb(230, 80, 70), textdatum_t::top_center);
-    txt(crashWhy, SCR_W / 2, 76, &fonts::Font0, TFT_WHITE, textdatum_t::top_center);
-  }
-  if (state == PAUSED) { canvas.fillRoundRect(80, 52, 80, 28, 5, rgb(8, 10, 30)); canvas.drawRoundRect(80, 52, 80, 28, 5, rgb(255, 224, 120)); txt("PAUSE", SCR_W / 2, 56, &fonts::Font4, TFT_WHITE, textdatum_t::top_center); }
-  if (state == OVER) {
-    canvas.fillRoundRect(40, 40, 160, 58, 6, rgb(8, 10, 30)); canvas.drawRoundRect(40, 40, 160, 58, 6, rgb(230, 80, 70));
-    txt("GAME OVER", SCR_W / 2, 44, &fonts::Font4, rgb(230, 80, 70), textdatum_t::top_center);
-    snprintf(b, sizeof b, L("%lu   best %lu", "%lu   record %lu"), (unsigned long)score, (unsigned long)best); txt(b, SCR_W / 2, 74, &fonts::Font2, TFT_WHITE, textdatum_t::top_center);
-  }
+  if (state == LANDED) { snprintf(b, sizeof b, "+%d  (x%d)", gain, padM[lastPad]); ui::notice(L("LANDED!", "POSE !"), b, nullptr, P_S); }
+  if (state == CRASH && stateT > 20) ui::notice("CRASH", crashWhy, nullptr, P_R);
+  if (state == PAUSED) ui::pause();
+  if (state == OVER) ui::gameOver("GAME OVER", score, best, (score) > 0 && (uint32_t)(score) >= (uint32_t)(best));
 }
 
 void loop() {
@@ -356,4 +345,5 @@ void icon(int x0, int y0) {
   drawShip(x0 + 26, y0 + 36, 0.12f, true, 1);
 }
 
+void preview(int cx, int cy) { drawShip((float)cx, (float)cy, sinf(millis() * 0.003f) * 0.15f, true, (int)(millis() / 60)); }
 }  // namespace lander

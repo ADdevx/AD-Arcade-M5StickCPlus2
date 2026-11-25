@@ -18,7 +18,7 @@ struct Rect { int16_t x, y, w, h; };
 static Rect walls[COLS * ROWS * 2 + 8]; static int nWalls = 0;
 struct Hole { int cx, cy; }; static Hole holes[8]; static int nHoles = 0;
 static float bx, by, vx, vy;
-static int level = 1, bestLevel = 1, readyT = 0, winT = 0, fallT = 0, animT = 0;
+static int level = 1, bestLevel = 1, winT = 0, fallT = 0, animT = 0;
 static uint32_t levelStart = 0, elapsed = 0;
 
 static void addWall(int x, int y, int w, int h) { if (nWalls < (int)(sizeof(walls) / sizeof(walls[0]))) walls[nWalls++] = {(int16_t)x, (int16_t)y, (int16_t)w, (int16_t)h}; }
@@ -105,7 +105,8 @@ static void step() {
   tilt::update();
   if (fallT > 0) { if (--fallT == 0) placeBall(); return; }
   float tx = tilt::x(), ty = -tilt::y();
-  if (fabsf(tx) < 0.06f) tx = 0; if (fabsf(ty) < 0.06f) ty = 0;
+  if (fabsf(tx) < 0.06f) tx = 0;
+  if (fabsf(ty) < 0.06f) ty = 0;
   vx += tx * 0.20f; vy += ty * 0.20f;
   vx *= 0.96f; vy *= 0.96f;
   vx = clampf(vx, -3.5f, 3.5f); vy = clampf(vy, -3.5f, 3.5f);
@@ -123,35 +124,36 @@ static void step() {
 }
 
 static void render() {
-  canvas.fillScreen(rgb(24, 28, 40));
-  canvas.fillRect(0, 0, COLS * CELL, ROWS * CELL, rgb(70, 90, 120));
-  for (int cy = 0; cy < ROWS; cy++) for (int cx = 0; cx < COLS; cx++) if (((cx + cy) & 1) == 0) canvas.fillRect(cx * CELL, cy * CELL, CELL, CELL, rgb(76, 98, 130));
-  // sortie
-  int gx = (COLS - 1) * CELL + CELL / 2, gy = (ROWS - 1) * CELL + CELL / 2;
-  canvas.fillCircle(gx, gy, 5, rgb(30, 220, 90)); canvas.fillCircle(gx, gy, 2, rgb(10, 80, 30));
+  // donjon : dalles sombres, murs de pierre clairs a contour noir
+  canvas.fillScreen(P_K);
+  canvas.fillRect(0, 0, COLS * CELL, ROWS * CELL, P_D);
+  for (int cy = 0; cy < ROWS; cy++) for (int cx = 0; cx < COLS; cx++) { canvas.fillRect(cx * CELL + 1, cy * CELL + 1, CELL - 2, 1, P_M); canvas.fillRect(cx * CELL + 1, cy * CELL + 1, 1, CELL - 2, P_M); if (((cx * 7 + cy * 3 + level) % 5) == 0) canvas.fillRect(cx * CELL + 5, cy * CELL + 6, 4, 1, P_M); }
+  // sortie : portail spectral qui pulse
+  int gx = (COLS - 1) * CELL + CELL / 2, gy = (ROWS - 1) * CELL + CELL / 2; int pr_ = 6 + (animT / 10) % 2;
+  canvas.fillCircle(gx, gy, pr_ + 1, P_K); canvas.fillCircle(gx, gy, pr_, P_S); canvas.fillCircle(gx, gy, 4, P_K); canvas.fillCircle(gx, gy, 3, P_B); canvas.fillRect(gx - 4, gy - 4, 2, 2, P_B);
   // trous
-  for (int i = 0; i < nHoles; i++) { int hx = holes[i].cx * CELL + CELL / 2, hy = holes[i].cy * CELL + CELL / 2; canvas.fillCircle(hx, hy, 5, rgb(5, 5, 10)); canvas.drawCircle(hx, hy, 5, rgb(40, 40, 60)); }
-  for (int i = 0; i < nWalls; i++) { const Rect &r = walls[i]; canvas.fillRect(r.x, r.y, r.w, r.h, rgb(235, 225, 190)); }
-  // bille
+  for (int i = 0; i < nHoles; i++) { int hx = holes[i].cx * CELL + CELL / 2, hy = holes[i].cy * CELL + CELL / 2; canvas.fillCircle(hx, hy, 6, P_M); canvas.fillCircle(hx, hy, 5, P_K); canvas.fillRect(hx - 4, hy - 5, 3, 1, P_L); }
+  // murs : ombre portee noire, pierre claire, reflet haut et flanc sombre
+  for (int i = 0; i < nWalls; i++) { const Rect &r = walls[i]; canvas.fillRect(r.x + 2, r.y + 2, r.w, r.h, P_K); }
+  for (int i = 0; i < nWalls; i++) { const Rect &r = walls[i]; canvas.fillRect(r.x, r.y, r.w, r.h, P_L); canvas.drawFastHLine(r.x, r.y, r.w, P_B); canvas.drawFastVLine(r.x + r.w - 1, r.y, r.h, P_M); }
+  // bille : acier, contour noir
   int ix = (int)bx, iy = (int)by; int rad = fallT > 0 ? (int)(BALL_R * fallT / 40.f) : (int)BALL_R;
   if (state != TITLE && rad > 0) {
-    canvas.fillCircle(ix + 1, iy + 1, rad, rgb(30, 40, 60));
-    canvas.fillCircle(ix, iy, rad, skin::c(0, rgb(220, 60, 50))); if (rad > 2) canvas.fillCircle(ix - 1, iy - 1, 1, skin::c(2, rgb(255, 200, 190)));
+    canvas.fillCircle(ix + 2, iy + 2, rad + 1, P_K);
+    pxDisc(ix, iy, rad > 1 ? rad : 1, skin::c(0, P_R), skin::c(2, P_B), skin::c(1, P_D));
   }
+  canvas.fillRect(0, ROWS * CELL, SCR_W, SCR_H - ROWS * CELL, P_D); canvas.fillRect(0, ROWS * CELL, SCR_W, 1, P_K); canvas.fillRect(0, ROWS * CELL + 1, SCR_W, 1, P_L);
   // infos
-  char b[48]; snprintf(b, sizeof b, L("LVL %d","NIV %d"), level); txt(b, 4, ROWS * CELL + 2, &fonts::Font0, TFT_WHITE);
-  snprintf(b, sizeof b, "%02lu:%02lu", (unsigned long)(elapsed / 60000), (unsigned long)((elapsed / 1000) % 60)); txt(b, SCR_W / 2, ROWS * CELL + 2, &fonts::Font0, rgb(255, 230, 120), textdatum_t::top_center);
-  snprintf(b, sizeof b, "max %d", bestLevel); txt(b, SCR_W - 4, ROWS * CELL + 2, &fonts::Font0, rgb(150, 200, 255), textdatum_t::top_right);
+  char b[48]; snprintf(b, sizeof b, L("LVL %d","NIV %d"), level); txt(b, 4, ROWS * CELL + 4, &fonts::Font2, P_B);
+  snprintf(b, sizeof b, "%02lu:%02lu", (unsigned long)(elapsed / 60000), (unsigned long)((elapsed / 1000) % 60)); txt(b, SCR_W / 2, ROWS * CELL + 4, &fonts::Font2, P_G, textdatum_t::top_center);
+  snprintf(b, sizeof b, "max %d", bestLevel); txt(b, SCR_W - 4, ROWS * CELL + 4, &fonts::Font2, P_S, textdatum_t::top_right);
   if (state == TITLE) {
-    canvas.fillRoundRect(20, 22, 200, 76, 6, rgb(14, 18, 34)); canvas.drawRoundRect(20, 22, 200, 76, 6, rgb(235, 225, 190));
-    txt(L("MAZE","LABYRINTHE"), SCR_W / 2, 28, &fonts::Font4, rgb(255, 210, 80), textdatum_t::top_center);
+    ui::window(24, 18, 192, 80, P_G, L("MAZE", "LABYRINTHE"));
+    txt(L("Tilt to roll the ball", "Penche pour rouler"), SCR_W / 2, 46, &fonts::Font2, P_K, textdatum_t::top_center);
+    txt(L("Reach the green portal!", "Atteins le portail vert !"), SCR_W / 2, 66, &fonts::Font0, P_D, textdatum_t::top_center);
   }
-  if (state == PAUSED) { canvas.fillRoundRect(80, 48, 80, 28, 5, rgb(14, 18, 34)); txt("PAUSE", SCR_W / 2, 52, &fonts::Font4, TFT_WHITE, textdatum_t::top_center); }
-  if (state == WIN) {
-    canvas.fillRoundRect(40, 28, 160, 66, 6, rgb(14, 18, 34)); canvas.drawRoundRect(40, 28, 160, 66, 6, rgb(30, 220, 90));
-    txt(L("WELL DONE!","BRAVO !"), SCR_W / 2, 32, &fonts::Font4, rgb(30, 220, 90), textdatum_t::top_center);
-    snprintf(b, sizeof b, L("level %d in %lu s","niveau %d en %lu s"), level, (unsigned long)(elapsed / 1000)); txt(b, SCR_W / 2, 60, &fonts::Font2, TFT_WHITE, textdatum_t::top_center);
-  }
+  if (state == PAUSED) ui::pause();
+  if (state == WIN) { snprintf(b, sizeof b, L("level %d in %lu s","niveau %d en %lu s"), level, (unsigned long)(elapsed / 1000)); ui::notice(L("WELL DONE!", "BRAVO !"), b, nullptr, P_S); }
 }
 
 void loop() {
@@ -164,6 +166,7 @@ void loop() {
         case PLAY: if (p) { state = PAUSED; sfx(440, 50); } break;
     case PAUSED: if (p || a) { state = PLAY; sfx(660, 50); levelStart = millis() - elapsed; } break;
     case WIN: if (a && winT > 40) { level++; newLevel(); state = PLAY; sfx(660, 40); } break;
+    default: break;
   }
   while (acc >= STEP_US) { if (state != PAUSED) step(); acc -= STEP_US; }
   render();
@@ -172,15 +175,13 @@ void loop() {
 }
 
 void icon(int x, int y) {
-  canvas.fillRoundRect(x, y, 64, 64, 6, rgb(70, 90, 120));
-  uint16_t w = rgb(235, 225, 190);
-  canvas.drawRect(x + 3, y + 3, 58, 58, w);
-  canvas.drawFastHLine(x + 3, y + 18, 34, w); canvas.drawFastVLine(x + 37, y + 18, 24, w);
-  canvas.drawFastHLine(x + 18, y + 34, 34, w); canvas.drawFastVLine(x + 18, y + 34, 18, w);
-  canvas.drawFastHLine(x + 18, y + 48, 24, w); canvas.drawFastVLine(x + 50, y + 3, 20, w);
-  canvas.fillCircle(x + 11, y + 11, 4, rgb(220, 60, 50)); canvas.fillCircle(x + 10, y + 10, 1, rgb(255, 200, 190));
-  canvas.fillCircle(x + 52, y + 52, 4, rgb(30, 220, 90));
-  canvas.fillCircle(x + 28, y + 26, 4, rgb(5, 5, 10));
+  canvas.fillRoundRect(x, y, 64, 64, 6, P_D);
+  auto wl = [&](int a, int b, int w, int h) { canvas.fillRect(a + 2, b + 2, w, h, P_K); canvas.fillRect(a, b, w, h, P_L); canvas.fillRect(a, b, w, 1, P_B); };
+  wl(x + 3, y + 3, 58, 3); wl(x + 3, y + 58, 58, 3); wl(x + 3, y + 3, 3, 58); wl(x + 58, y + 3, 3, 58);
+  wl(x + 3, y + 18, 34, 3); wl(x + 36, y + 18, 3, 24); wl(x + 18, y + 34, 34, 3); wl(x + 18, y + 34, 3, 20); wl(x + 18, y + 48, 26, 3); wl(x + 48, y + 3, 3, 20);
+  pxDisc(x + 12, y + 12, 4, P_R, P_B, P_D);
+  canvas.fillCircle(x + 51, y + 51, 6, P_K); canvas.fillCircle(x + 51, y + 51, 5, P_S); canvas.fillCircle(x + 51, y + 51, 2, P_B);
+  canvas.fillCircle(x + 28, y + 26, 5, P_M); canvas.fillCircle(x + 28, y + 26, 4, P_K);
 }
 
 }  // namespace maze

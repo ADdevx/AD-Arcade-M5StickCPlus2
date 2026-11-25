@@ -134,7 +134,8 @@ static void step() {
   if (state != PLAY) { if (--spawnT <= 0) { spawn(); spawnT = 40; } return; }
   tilt::update();
   float tx = tilt::x(), ty = -tilt::y();
-  if (fabsf(tx) < 0.06f) tx = 0; if (fabsf(ty) < 0.06f) ty = 0;
+  if (fabsf(tx) < 0.06f) tx = 0;
+  if (fabsf(ty) < 0.06f) ty = 0;
   const float mx = 2.7f;
   fvx += (clampf(tx * mx * 1.15f, -mx, mx) - fvx) * 0.085f; fvy += (clampf(ty * mx * 1.15f, -mx, mx) - fvy) * 0.085f;
   if (tx == 0 && ty == 0) fvy += sinf(animT * 0.08f) * 0.012f;
@@ -160,8 +161,8 @@ static void step() {
         psT += f.s * 0.085f;
         bubble(f.x, fy2, 3); emit(f.x, fy2, 7, 0, rgb(255, 232, 120));
         sfx(700 + (int)f.s * 10 + combo * 60, 30); sfx(1000 + (int)f.s * 10 + combo * 60, 40, false);
-        char t[10]; snprintf(t, sizeof t, "+%d", pts); pop(f.x, fy2 - f.s, t, rgb(255, 235, 120));
-        if (combo >= 2) { char c[10]; snprintf(c, sizeof c, "x%d", m); pop(fx, fy - ps - 10, c, rgb(255, 160, 60)); }
+        char t[16]; snprintf(t, sizeof t, "+%d", pts); pop(f.x, fy2 - f.s, t, rgb(255, 235, 120));
+        if (combo >= 2) { char c[16]; snprintf(c, sizeof c, "x%d", m); pop(fx, fy - ps - 10, c, rgb(255, 160, 60)); }
         if (psT >= 26) {
           level++; psT = ps = 8; invul = 60; graceT = 70; combo = 0;
           pop(SCR_W / 2.f, 46, L("NEXT LEVEL", "NIVEAU SUIVANT"), rgb(120, 255, 190));
@@ -345,7 +346,7 @@ static void render() {
   }
   renderFront();
   if (flashT > 0) { for (int i = 0; i < 3; i++) { uint16_t c = mixc(rgb(255, 40, 40), 0, 40 + i * 70 + (12 - flashT) * 6); canvas.drawRect(i, i, SCR_W - 2 * i, SCR_H - 2 * i, c); } }
-  for (auto &p : pops) if (p.t > 0) txtO(p.s, (int)p.x, (int)p.y, &fonts::Font2, p.col, rgb(0, 20, 50), textdatum_t::top_center);
+  for (auto &p : pops) if (p.t > 0) ui::popText((int)p.x, (int)p.y, p.s, p.col);
   char b[24];
   if (state != TITLE) {
     snprintf(b, sizeof b, "%lu", (unsigned long)score); txtO(b, 5, 0, &fonts::Font4, TFT_WHITE, rgb(0, 30, 70));
@@ -361,12 +362,8 @@ static void render() {
     txt(L("FISH", "POISSON"), SCR_W / 2, 31, &fonts::Font4, rgb(255, 176, 64), textdatum_t::top_center, 1.2f);
     if (best > 0) { snprintf(b, sizeof b, L("best %lu", "record %lu"), (unsigned long)best); txt(b, SCR_W / 2, 62, &fonts::Font2, rgb(200, 230, 250), textdatum_t::top_center); }
   }
-  if (state == PAUSED) { panel(76, 44, 88, 32, rgb(150, 215, 245)); txt("PAUSE", SCR_W / 2, 50, &fonts::Font4, TFT_WHITE, textdatum_t::top_center); }
-  if (state == OVER) {
-    panel(34, 26, 172, 66, rgb(235, 90, 70));
-    txt(L("EATEN!", "MANGE !"), SCR_W / 2, 31, &fonts::Font4, rgb(255, 120, 90), textdatum_t::top_center);
-    snprintf(b, sizeof b, L("%lu   best %lu", "%lu   record %lu"), (unsigned long)score, (unsigned long)best); txt(b, SCR_W / 2, 64, &fonts::Font2, TFT_WHITE, textdatum_t::top_center);
-  }
+  if (state == PAUSED) ui::pause();
+  if (state == OVER) ui::gameOver(L("EATEN!", "MANGE !"), score, best, (score) > 0 && (uint32_t)(score) >= (uint32_t)(best));
 }
 
 void loop() {

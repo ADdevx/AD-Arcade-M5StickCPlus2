@@ -1,0 +1,13 @@
+[env:m5stickc-plus2]
+platform = https://github.com/pioarduino/platform-espressif32/releases/download/stable/platform-espressif32.zip
+board = m5stick-c
+framework = arduino
+board_build.variant = m5stack_stickc_plus2
+board_build.partitions = default_8MB.csv
+board_upload.flash_size = 8MB
+build_flags = -O2 -DCORE_DEBUG_LEVEL=0
+lib_extra_dirs =
+    /tmp/claude-0/-home-claude/fc60b273-2024-5bad-8459-253dc51ef87f/scratchpad/pinned
+    /root/.platformio/packages/framework-arduinoespressif32/libraries
+lib_ldf_mode = deep+
+extra_scripts = post:merge_bin.py

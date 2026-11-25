@@ -102,7 +102,7 @@ static const int NT = sizeof(TUNES) / sizeof(TUNES[0]);
 struct Note { float freq; int start, dur; int midi; };         // en millisecondes
 static const int NNOTES = 400;
 static Note notes[NNOTES]; static int nNotes = 0, totalMs = 0, minMidi = 60, maxMidi = 72;
-static int sel = 0; static bool playing = false; static uint32_t t0 = 0, lastNow = 0; static int curNote = -1;
+static int sel = 0; static bool playing = false; static uint32_t t0 = 0; static int curNote = -1;
 static int animT = 0;
 struct Spark { float x, y, vx, vy; int t; uint16_t c; }; static Spark sp[30];
 
@@ -283,7 +283,7 @@ static void startPlay() { playing = true; t0 = millis(); curNote = -1; }
 static void stopPlay() { playing = false; M5.Speaker.stop(); }
 
 static uint16_t hueCol(int midi) {
-  static const uint16_t pal[12] = {rgb(255, 80, 90), rgb(255, 130, 70), rgb(255, 190, 60), rgb(240, 230, 70), rgb(160, 230, 80), rgb(70, 220, 130), rgb(60, 220, 210), rgb(70, 170, 255), rgb(110, 120, 255), rgb(170, 110, 255), rgb(230, 100, 240), rgb(255, 100, 180)};
+  static const uint16_t pal[12] = {P_R, P_G, P_S, P_B, P_L, P_G, P_S, P_R, P_B, P_G, P_S, P_L};
   return pal[midi % 12];
 }
 static int yOf(int midi) { return 112 - (midi - minMidi) * 84 / (maxMidi - minMidi); }
@@ -307,57 +307,54 @@ static void step() {
 }
 
 static void renderAdd() {
-  canvas.fillScreen(rgb(10, 8, 26));
-  canvas.fillRect(0, 0, SCR_W, 13, rgb(18, 14, 44));
-  txt(titleOf(sel), SCR_W / 2, 0, &fonts::Font2, TFT_WHITE, textdatum_t::top_center);
-  canvas.fillTriangle(5, 6, 11, 2, 11, 10, rgb(255, 210, 80)); canvas.fillTriangle(SCR_W - 5, 6, SCR_W - 11, 2, SCR_W - 11, 10, rgb(255, 210, 80));
+  ui::bg((int)(millis() / 60));
+  ui::header(titleOf(sel), P_S);
+  ui::window(4, 20, 232, 96, P_G, L("ADD SONGS", "AJOUTER"));
   int wx = 214, wy = 44; int ph = (millis() / 300) % 4;                                   // icone Wi-Fi animee
-  canvas.fillCircle(wx, wy + 18, 3, rgb(120, 255, 160));
-  for (int k = 0; k < 3; k++) { uint16_t c = k < ph ? rgb(120, 255, 160) : rgb(40, 60, 70); for (int w = 0; w < 2; w++) canvas.drawArc(wx, wy + 18, 8 + k * 7 + w, 8 + k * 7 + w, 225, 315, c); }
-  txt(L("1. Connect to Wi-Fi", "1. Connecte-toi au Wi-Fi"), 6, 18, &fonts::Font0, rgb(255, 210, 80));
-  txt(AP_SSID, 6, 29, &fonts::Font4, TFT_WHITE);
-  char b[40]; snprintf(b, sizeof b, L("password: %s", "mot de passe : %s"), AP_PASS); txt(b, 6, 57, &fonts::Font2, rgb(150, 220, 255));
-  txt(L("2. Open in your browser", "2. Ouvre dans ton navigateur"), 6, 78, &fonts::Font0, rgb(255, 210, 80));
-  txt("192.168.4.1", 6, 89, &fonts::Font4, TFT_WHITE);
-  canvas.fillRect(0, 118, SCR_W, 17, rgb(18, 14, 44));
-  if (lastMsg[0] && millis() - lastMsgT < 5000) txt(lastMsg, SCR_W / 2, 120, &fonts::Font2, rgb(120, 255, 160), textdatum_t::top_center);
-  else { snprintf(b, sizeof b, L("%d custom songs   B = back", "%d morceaux perso   B = retour"), nCs); txt(b, SCR_W / 2, 123, &fonts::Font0, rgb(150, 160, 200), textdatum_t::top_center); }
+  canvas.fillRect(wx - 2, wy + 18, 5, 5, P_K); canvas.fillRect(wx - 1, wy + 19, 3, 3, P_S);
+  for (int k = 0; k < 3; k++) { uint16_t c = k < ph ? P_S : P_L; for (int w = 0; w < 3; w++) canvas.drawArc(wx, wy + 18, 8 + k * 7 + w, 8 + k * 7 + w, 225, 315, w == 0 || w == 2 ? P_K : c); }
+  txt(L("1. Connect to Wi-Fi", "1. Connecte-toi au Wi-Fi"), 10, 42, &fonts::Font0, P_M);
+  txt(AP_SSID, 10, 51, &fonts::Font2, P_R);
+  char b[40]; snprintf(b, sizeof b, L("password: %s", "mot de passe : %s"), AP_PASS); txt(b, 10, 68, &fonts::Font0, P_K);
+  txt(L("2. Open in your browser", "2. Ouvre dans ton navigateur"), 10, 82, &fonts::Font0, P_M);
+  txt("192.168.4.1", 10, 92, &fonts::Font2, P_R);
+  if (lastMsg[0] && millis() - lastMsgT < 5000) ui::footer(lastMsg);
+  else { snprintf(b, sizeof b, L("%d custom songs   B = back", "%d morceaux perso   B = retour"), nCs); ui::footer(b); }
 }
 
 static void render() {
   if (addMode()) { renderAdd(); return; }
-  canvas.fillScreen(rgb(10, 8, 26));
+  ui::bg((int)(millis() / 60));
   int now = playing ? (int)(millis() - t0) : 0;
-  // lignes de portee
-  for (int i = 0; i < 5; i++) canvas.drawFastHLine(0, 30 + i * 18, SCR_W, rgb(24, 22, 52));
+  canvas.fillRect(3, 20, SCR_W - 6, 99, P_K); canvas.fillRect(4, 21, SCR_W - 8, 97, P_D); canvas.fillRect(4, 21, SCR_W - 8, 1, P_M);
+  for (int i = 0; i < 5; i++) canvas.drawFastHLine(4, 30 + i * 18, SCR_W - 8, P_M);
   const int HX = 80; const float PXMS = 0.09f;
-  // notes : barres qui defilent vers la gauche, tete de lecture a HX
+  canvas.setClipRect(4, 21, SCR_W - 8, 97);
   for (int i = 0; i < nNotes; i++) {
     float x0 = HX + (notes[i].start - now) * PXMS, w = notes[i].dur * PXMS - 2;
     if (x0 > SCR_W || x0 + w < 0) continue;
     int y = yOf(notes[i].midi); uint16_t c = hueCol(notes[i].midi);
     bool active = playing && now >= notes[i].start && now < notes[i].start + notes[i].dur;
     bool past = playing && now >= notes[i].start + notes[i].dur;
-    uint16_t cc = past ? mixc(c, rgb(10, 8, 26), 170) : c;
     if (w < 3) w = 3;
-    if (active) canvas.fillRoundRect((int)x0 - 2, y - 2, (int)w + 4, 11, 4, TFT_WHITE);
-    canvas.fillRoundRect((int)x0, y, (int)w, 7, 3, cc);
-    if (!past) canvas.drawFastHLine((int)x0 + 2, y + 1, (int)w - 4, mixc(cc, 0xFFFF, 110));
+    if (active) canvas.fillRect((int)x0 - 3, y - 3, (int)w + 6, 13, P_B);
+    canvas.fillRect((int)x0 - 1, y - 1, (int)w + 2, 9, P_K); canvas.fillRect((int)x0, y, (int)w, 7, past ? P_M : c);
+    if (!past) { canvas.drawFastHLine((int)x0, y, (int)w, P_B); canvas.drawFastHLine((int)x0, y + 6, (int)w, P_D); }
   }
-  canvas.drawFastVLine(HX, 18, 100, rgb(255, 255, 255)); canvas.fillTriangle(HX - 5, 14, HX + 5, 14, HX, 22, rgb(255, 255, 255));
+  canvas.fillRect(HX - 1, 22, 3, 95, P_K); canvas.drawFastVLine(HX, 22, 95, P_B);
   for (auto &s : sp) if (s.t > 0) canvas.fillRect((int)s.x, (int)s.y, 2, 2, s.c);
-  // titre
-  canvas.fillRect(0, 0, SCR_W, 13, rgb(18, 14, 44));
-  txt(titleOf(sel), SCR_W / 2, 0, &fonts::Font2, TFT_WHITE, textdatum_t::top_center);
-  canvas.fillTriangle(5, 6, 11, 2, 11, 10, rgb(255, 210, 80)); canvas.fillTriangle(SCR_W - 5, 6, SCR_W - 11, 2, SCR_W - 11, 10, rgb(255, 210, 80));
-  // barre de progression + bouton lecture
-  canvas.fillRect(0, 124, SCR_W, 11, rgb(18, 14, 44));
-  int prog = playing ? (int)(SCR_W * clampf(now / (float)totalMs, 0, 1)) : 0;
-  canvas.fillRect(0, 130, SCR_W, 3, rgb(40, 36, 80)); canvas.fillRect(0, 130, prog, 3, rgb(255, 210, 80));
-  if (playing) { canvas.fillRect(SCR_W / 2 - 6, 125, 4, 6, TFT_WHITE); canvas.fillRect(SCR_W / 2 + 2, 125, 4, 6, TFT_WHITE); }
-  else canvas.fillTriangle(SCR_W / 2 - 4, 125, SCR_W / 2 - 4, 131, SCR_W / 2 + 4, 128, rgb(120, 255, 160));
-  // petit equaliseur
-  if (playing && curNote >= 0) for (int i = 0; i < 6; i++) { int h = 3 + (int)((sinf(animT * 0.5f + i * 1.3f) + 1.0f) * 4); canvas.fillRect(8 + i * 5, 130 - h, 3, h, hueCol(notes[curNote].midi)); }
+  canvas.clearClipRect();
+  canvas.fillTriangle(HX - 6, 21, HX + 6, 21, HX, 29, P_K); canvas.fillTriangle(HX - 4, 21, HX + 4, 21, HX, 27, P_G);
+  ui::header(titleOf(sel), P_S);
+  canvas.fillTriangle(6, 10, 14, 4, 14, 16, P_K); canvas.fillTriangle(8, 10, 13, 6, 13, 14, P_B);
+  canvas.fillTriangle(SCR_W - 6, 10, SCR_W - 14, 4, SCR_W - 14, 16, P_K); canvas.fillTriangle(SCR_W - 8, 10, SCR_W - 13, 6, SCR_W - 13, 14, P_B);
+  // barre de lecture
+  canvas.fillRect(0, 119, SCR_W, 16, P_K); canvas.fillRect(0, 119, SCR_W, 1, P_G);
+  int prog = playing ? (int)((SCR_W - 4) * clampf(now / (float)totalMs, 0, 1)) : 0;
+  canvas.fillRect(2, 130, SCR_W - 4, 3, P_M); canvas.fillRect(2, 130, prog, 3, P_G);
+  if (playing) { canvas.fillRect(SCR_W / 2 - 6, 122, 4, 6, P_B); canvas.fillRect(SCR_W / 2 + 2, 122, 4, 6, P_B); }
+  else canvas.fillTriangle(SCR_W / 2 - 4, 121, SCR_W / 2 - 4, 128, SCR_W / 2 + 4, 124, P_S);
+  if (playing && curNote >= 0) for (int i = 0; i < 6; i++) { int h = 2 + (int)((sinf(animT * 0.5f + i * 1.3f) + 1.0f) * 3); canvas.fillRect(8 + i * 5, 129 - h, 3, h, hueCol(notes[curNote].midi)); }
 }
 
 void loop() {
@@ -385,12 +382,13 @@ void loop() {
 }
 
 void icon(int x, int y) {
-  canvas.fillRoundRect(x, y, 64, 64, 6, rgb(10, 8, 26));
-  static const int ys[7] = {40, 30, 36, 22, 28, 16, 24}; static const int ws[7] = {8, 6, 10, 6, 8, 10, 7};
-  int xx = x + 4;
-  for (int i = 0; i < 6; i++) { canvas.fillRoundRect(xx, y + ys[i], ws[i], 7, 3, hueCol(i * 2)); xx += ws[i] + 2; }
-  canvas.fillCircle(x + 20, y + 52, 4, rgb(255, 255, 255)); canvas.fillRect(x + 23, y + 38, 2, 15, TFT_WHITE);
-  canvas.fillCircle(x + 40, y + 54, 4, rgb(255, 255, 255)); canvas.fillRect(x + 43, y + 40, 2, 15, TFT_WHITE); canvas.fillRect(x + 23, y + 38, 22, 3, TFT_WHITE);
+  ui::tile(x, y, P_D);
+  for (int i = 0; i < 5; i++) canvas.fillRect(x + 4, y + 14 + i * 8, 56, 1, P_L);
+  pxDisc(x + 21, y + 46, 6, P_B, P_B, P_L); pxDisc(x + 45, y + 40, 6, P_B, P_B, P_L);
+  canvas.fillRect(x + 25, y + 12, 4, 35, P_K); canvas.fillRect(x + 26, y + 13, 2, 33, P_B);
+  canvas.fillRect(x + 49, y + 6, 4, 35, P_K); canvas.fillRect(x + 50, y + 7, 2, 33, P_B);
+  canvas.fillTriangle(x + 25, y + 10, x + 53, y + 3, x + 53, y + 13, P_K); canvas.fillTriangle(x + 28, y + 11, x + 50, y + 6, x + 50, y + 11, P_G);
+  canvas.fillRect(x + 6, y + 6, 4, 4, P_S); canvas.fillRect(x + 7, y + 7, 2, 2, P_B); canvas.fillRect(x + 8, y + 54, 4, 4, P_R); canvas.fillRect(x + 52, y + 52, 4, 4, P_G);
 }
 
 }  // namespace music

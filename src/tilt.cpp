@@ -21,6 +21,10 @@ static float base[3];
 static const char* warn = nullptr;
 static const float SCALE = 0.45f;        // 0.45 g (~27 degres) = pleine inclinaison
 
+// Appareil sans capteur de mouvement (ex. Cardputer) : les touches fleches simulent l'inclinaison (g_kbdX / g_kbdY = -1, 0 ou 1)
+static bool virt() { return !M5.Imu.isEnabled(); }
+static float vx = 0, vy = 0;
+
 static void readRaw(float* a) {
   float x = 0, y = 0, z = 0;
   M5.Imu.getAccel(&x, &y, &z);
@@ -30,6 +34,7 @@ static void readRaw(float* a) {
 void load() {
   pr.begin("tilt", false);
   ok = pr.getBool("ok", false);
+  if (virt()) { ok = true; axX = 0; axY = 1; sgX = sgY = sgZ = 1; zeroV[0] = zeroV[1] = 0; zeroV[2] = 1; return; }
   if (ok) {
     axX = pr.getInt("ax", 0); axY = pr.getInt("ay", 1);
     sgX = pr.getInt("sx", 1) >= 0 ? 1.f : -1.f; sgY = pr.getInt("sy", 1) >= 0 ? 1.f : -1.f;
@@ -40,9 +45,10 @@ void load() {
 bool valid() { return ok; }
 bool calibrating() { return calib; }
 
-void startCalibration() { calib = true; step = 0; capturing = false; warn = nullptr; }
+void startCalibration() { if (virt()) return; calib = true; step = 0; capturing = false; warn = nullptr; }
 
 void update() {
+  if (virt()) { vx += 0.35f * (g_kbdX - vx); vy += 0.35f * (g_kbdY - vy); return; }
   float a[3]; readRaw(a);
   for (int i = 0; i < 3; i++) filt[i] += 0.35f * (a[i] - filt[i]);
 }
@@ -52,6 +58,7 @@ static void detectMode() { int axZ = 3 - axX - axY; mode = fabsf(sgZ * zeroV[axZ
 int posture() { return mode; }
 
 void zero() {
+  if (virt()) return;
   float s[3] = {0, 0, 0}; const int N = 10;
   for (int i = 0; i < N; i++) { float a[3]; readRaw(a); for (int k = 0; k < 3; k++) s[k] += a[k]; delay(6); }
   for (int k = 0; k < 3; k++) { zeroV[k] = s[k] / N; filt[k] = zeroV[k]; }
@@ -61,7 +68,7 @@ void zero() {
 // Au lancement d'un jeu : on compare la pose actuelle a celle memorisee au demarrage.
 // Differente (par ex. demarre a plat, joue debout) -> on re-stabilise silencieusement, sinon on garde la stabilisation unique.
 bool adapt() {
-  if (!ok) return false;
+  if (!ok || virt()) return false;
   float s[3] = {0, 0, 0}; const int N = 6;
   for (int i = 0; i < N; i++) { float a[3]; readRaw(a); for (int k = 0; k < 3; k++) s[k] += a[k]; delay(5); }
   float dmax = 0; for (int k = 0; k < 3; k++) { s[k] /= N; float d = fabsf(s[k] - zeroV[k]); if (d > dmax) dmax = d; }
@@ -71,12 +78,13 @@ bool adapt() {
   return true;
 }
 
-float x() { return ok ? clampf(sgX * (filt[axX] - zeroV[axX]) / SCALE, -1.f, 1.f) : 0.f; }
+float x() { if (virt()) return vx; return ok ? clampf(sgX * (filt[axX] - zeroV[axX]) / SCALE, -1.f, 1.f) : 0.f; }
 // y() s'adapte a la facon dont on tient le M5 au moment de la stabilisation :
 //  - a plat (ecran vers le haut) : le haut de l'ecran qui descend = + (axe Y de l'accelerometre)
 //  - debout / en paysage (comme une Game Boy) : on pousse le haut de l'ecran vers l'avant = + (axe perpendiculaire a l'ecran)
 //  - entre les deux (tenu en biais) : melange continu. Dans tous les cas, gauche/droite = pencher le cote droit vers le bas.
 float y() {
+  if (virt()) return vy;
   if (!ok) return 0.f;
   int axZ = 3 - axX - axY;
   float u0 = sgY * zeroV[axY], w0 = sgZ * zeroV[axZ];
@@ -89,31 +97,35 @@ float y() {
 
 // ----------------------------- assistant ------------------------------------
 static void drawDevice(int cx, int cy, int hi) {
-  // le M5 vu de face, a l'horizontale ; hi : 0 = rien, 1 = cote droit, 2 = haut
-  canvas.fillRoundRect(cx - 50, cy - 20, 100, 40, 5, rgb(60, 60, 70));
-  canvas.fillRoundRect(cx - 40, cy - 14, 66, 28, 3, rgb(20, 30, 60));
-  canvas.fillCircle(cx + 38, cy, 5, rgb(230, 90, 40));
-  if (hi == 1) { canvas.fillRect(cx + 46, cy - 20, 5, 40, rgb(250, 220, 60)); canvas.fillTriangle(cx + 62, cy + 6, cx + 78, cy + 6, cx + 70, cy + 20, rgb(250, 220, 60)); }
-  if (hi == 2) { canvas.fillRect(cx - 50, cy - 20, 100, 5, rgb(250, 220, 60)); canvas.fillTriangle(cx - 10, cy - 38, cx + 10, cy - 38, cx, cy - 26, rgb(250, 220, 60)); }
+  // le M5 vu de face, a l'horizontale ; hi : 0 = rien, 1 = cote droit, 2 = haut  (pixel art, palette commune)
+  pxBox(cx - 38, cy - 15, 76, 30, P_M, P_L, P_D);
+  canvas.fillRect(cx - 32, cy - 10, 46, 20, P_K); canvas.fillRect(cx - 31, cy - 9, 44, 18, P_D);
+  canvas.fillRect(cx - 28, cy - 5, 14, 2, P_S); canvas.fillRect(cx - 28, cy - 1, 22, 2, P_L); canvas.fillRect(cx - 28, cy + 3, 10, 2, P_G);
+  pxDisc(cx + 24, cy, 5, P_R, P_G, P_D);
+  canvas.fillRect(cx + 17, cy - 12, 3, 4, P_K); canvas.fillRect(cx + 17, cy + 8, 3, 4, P_K);
+  if (hi == 1) { canvas.fillRect(cx + 40, cy - 15, 3, 30, P_G); canvas.fillTriangle(cx + 47, cy - 5, cx + 47, cy + 5, cx + 55, cy, P_G); canvas.drawTriangle(cx + 47, cy - 5, cx + 47, cy + 5, cx + 55, cy, P_K); }
+  if (hi == 2) { canvas.fillRect(cx - 38, cy - 18, 76, 3, P_G); canvas.fillTriangle(cx - 6, cy - 31, cx + 6, cy - 31, cx, cy - 22, P_G); canvas.drawTriangle(cx - 6, cy - 31, cx + 6, cy - 31, cx, cy - 22, P_K); }
 }
 
 void calibrationStep() {
   update();
-  const char* title[3] = {L("1/3  FLAT","1/3  A PLAT"), L("2/3  RIGHT SIDE DOWN","2/3  COTE DROIT EN BAS"), L("3/3  TOP OF SCREEN DOWN","3/3  HAUT DE L'ECRAN EN BAS")};
-  const char* help[3] = {L("Hold the M5 flat and still","Tiens le M5 horizontal et immobile"), L("Tilt the RIGHT side down","Penche le cote DROIT vers le bas"), L("Tilt the TOP of the screen down","Penche le HAUT de l'ecran vers le bas")};
-  canvas.fillScreen(rgb(10, 12, 24));
-  txt(L("CALIBRATION","CALIBRAGE"), SCR_W / 2, 4, &fonts::Font2, rgb(250, 220, 60), textdatum_t::top_center);
-  txt(title[step], SCR_W / 2, 24, &fonts::Font2, TFT_WHITE, textdatum_t::top_center);
-  drawDevice(SCR_W / 2 - 4, 76, step);
-  txt(help[step], SCR_W / 2, 108, &fonts::Font0, rgb(180, 200, 255), textdatum_t::top_center);
-  if (warn) txt(warn, SCR_W / 2, 52, &fonts::Font0, rgb(255, 110, 90), textdatum_t::top_center);
+  const char* help[3] = {L("Hold the M5 flat and still","Tiens le M5 a plat, immobile"), L("Tilt the RIGHT side down","Penche le cote DROIT en bas"), L("Tilt the TOP of the screen down","Penche le HAUT de l'ecran en bas")};
+  uint32_t tt = millis() / 60;
+  ui::bg((int)tt);
+  char ti[32]; snprintf(ti, sizeof ti, "%s %d/3", L("CALIBRATION", "CALIBRAGE"), step + 1);
+  ui::window(6, 3, 228, 112, step == 0 ? P_S : step == 1 ? P_G : P_R, ti);
+  int bob = (int)((tt / 6) & 1);
+  drawDevice(SCR_W / 2, 59 + (capturing ? 0 : bob), step);
+  for (int i = 0; i < 3; i++) { int dx = SCR_W / 2 - 14 + i * 14; pxDisc(dx, 28, 3, i < step ? P_S : (i == step ? P_G : P_L), P_B, P_D); }
+  txt(help[step], SCR_W / 2, 84, &fonts::Font0, P_K, textdatum_t::top_center);
+  if (warn) { canvas.fillRect(20, 94, 200, 11, P_R); canvas.drawRect(20, 94, 200, 11, P_K); txt(warn, SCR_W / 2, 96, &fonts::Font0, P_B, textdatum_t::top_center); }
+  else if (capturing) { uint32_t el = millis() - capStart; int w = (int)(el < 900 ? el : 900) * 196 / 900; canvas.fillRect(20, 96, 200, 9, P_K); canvas.fillRect(22, 98, w, 5, P_S); }
+  ui::footer(capturing ? L("hold still...", "ne bouge plus...") : L("A : capture, then stay still", "A : mesurer, puis immobile"));
 
   if (!capturing) {
-    txt(L("press M5 (A) then hold still","appuie sur M5 (A) puis ne bouge plus"), SCR_W / 2, 122, &fonts::Font0, rgb(140, 150, 180), textdatum_t::top_center);
     if (M5.BtnA.wasPressed()) { capturing = true; capStart = millis(); capN = 0; capSum[0] = capSum[1] = capSum[2] = 0; warn = nullptr; }
   } else {
     uint32_t el = millis() - capStart;
-    txt(L("hold still...","ne bouge plus..."), SCR_W / 2, 122, &fonts::Font0, rgb(120, 255, 140), textdatum_t::top_center);
     if (el > 400) { float a[3]; readRaw(a); for (int k = 0; k < 3; k++) capSum[k] += a[k]; capN++; }   // 400 ms de latence, puis moyenne
     if (el > 900 && capN > 0) {
       float v[3]; for (int k = 0; k < 3; k++) v[k] = capSum[k] / capN;

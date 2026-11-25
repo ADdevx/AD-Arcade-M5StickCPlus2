@@ -139,7 +139,8 @@ static void step() {
   float l, r, c; edges(BY, l, r, c);
   if (bx < l + 8) { bx = l + 8; bv = fabsf(bv) * 0.3f; spd *= 0.995f; if ((animT & 3) == 0) splash(bx - 6, BY, 2); }
   if (bx > r - 8) { bx = r - 8; bv = -fabsf(bv) * 0.3f; spd *= 0.995f; if ((animT & 3) == 0) splash(bx + 6, BY, 2); }
-  if (animT % 29 == 7) splash(bx - 12, BY - 2, 2); if (animT % 29 == 21) splash(bx + 12, BY - 2, 2);   // la pagaie plonge
+  if (animT % 29 == 7) splash(bx - 12, BY - 2, 2);
+  if (animT % 29 == 21) splash(bx + 12, BY - 2, 2);   // la pagaie plonge
   float dm_ = dif(0.9f, 1.0f, 1.1f); float base = (1.8f + steps * 0.0007f) * dm_; if (base > 3.9f * dm_) base = 3.9f * dm_;
   spd += (base - spd) * 0.03f;
   tgtW = 104 - fminf(32.f, steps / 70.f);
@@ -228,11 +229,11 @@ static void drawKayak(int x, int y, float lean) {
   for (int k = 1; k < 8; k++) { int w = 3 + k * 2, yy = y + 10 + k * 4; uint16_t c = k < 4 ? rgb(225, 242, 252) : rgb(170, 210, 240); canvas.drawFastHLine(x - w - l - 1, yy, 2, c); canvas.drawFastHLine(x + w - l, yy, 2, c); }
   canvas.drawFastHLine(x - 5 - l, y - 15, 3, rgb(230, 245, 255)); canvas.drawFastHLine(x + 3 - l, y - 15, 3, rgb(230, 245, 255));
   canvas.fillEllipse(x + 1, y + 3, 6, 13, rgb(28, 64, 112));                                  // ombre
-  canvas.fillEllipse(x, y, 5, 13, rgb(214, 96, 24));                                          // coque (flanc sombre)
-  canvas.fillEllipse(x - 1, y, 4, 12, rgb(245, 126, 32));
-  canvas.fillTriangle(x - 3, y - 8, x + 3, y - 8, x, y - 17, rgb(245, 126, 32));              // proue
-  canvas.fillTriangle(x - 3, y + 8, x + 3, y + 8, x, y + 16, rgb(214, 96, 24));               // poupe
-  canvas.drawLine(x, y - 17, x, y + 16, rgb(255, 206, 100));                                  // liston
+  canvas.fillEllipse(x, y, 5, 13, skin::c(1, rgb(214, 96, 24)));                                          // coque (flanc sombre)
+  canvas.fillEllipse(x - 1, y, 4, 12, skin::c(0, rgb(245, 126, 32)));
+  canvas.fillTriangle(x - 3, y - 8, x + 3, y - 8, x, y - 17, skin::c(0, rgb(245, 126, 32)));              // proue
+  canvas.fillTriangle(x - 3, y + 8, x + 3, y + 8, x, y + 16, skin::c(1, rgb(214, 96, 24)));               // poupe
+  canvas.drawLine(x, y - 17, x, y + 16, skin::c(3, rgb(255, 206, 100)));                                  // liston
   canvas.fillEllipse(x, y - 1, 4, 6, rgb(38, 40, 52));                                        // cockpit
   // pagayeur : le bras et la pagaie suivent le rythme de la nage
   float ph = sinf(animT * 0.22f) * 0.5f;
@@ -289,7 +290,7 @@ static void render() {
   for (auto &o : objs) if (o.on) { if (o.type == 0) drawRock((int)o.x, (int)o.y, (int)o.a); else if (o.type == 1) drawLog(o); else drawCoin((int)o.x, (int)o.y); }
   if (state != OVER || (animT & 8)) if (invul == 0 || (animT & 4)) drawKayak((int)bx + ox, BY, bv / 4.0f);
   for (auto &p : parts) if (p.t > 0) { uint16_t c = p.t > 8 ? TFT_WHITE : rgb(190, 225, 248); canvas.drawPixel((int)p.x, (int)p.y, c); if (p.t > 12) canvas.drawPixel((int)p.x + 1, (int)p.y, c); }
-  for (auto &p : pops) if (p.t > 0) txtO(p.s, (int)p.x, (int)p.y, &fonts::Font2, p.col, rgb(0, 0, 0), textdatum_t::top_center);
+  for (auto &p : pops) if (p.t > 0) ui::popText((int)p.x, (int)p.y, p.s, p.col);
   char b[24];
   if (state != TITLE) {
     snprintf(b, sizeof b, "%lu", (unsigned long)score); txtO(b, 5, 2, &fonts::Font4, TFT_WHITE, rgb(10, 30, 60));
@@ -301,12 +302,8 @@ static void render() {
     txt(L("RIVER","RIVIERE"), SCR_W / 2, 34, &fonts::Font4, rgb(255, 215, 90), textdatum_t::top_center, 1.2f);
     if (best > 0) { snprintf(b, sizeof b, L("best %lu","record %lu"), (unsigned long)best); txt(b, SCR_W / 2, 64, &fonts::Font2, rgb(200, 225, 250), textdatum_t::top_center); }
   }
-  if (state == PAUSED) { canvas.fillRoundRect(80, 46, 80, 28, 5, rgb(12, 36, 70)); txt("PAUSE", SCR_W / 2, 50, &fonts::Font4, TFT_WHITE, textdatum_t::top_center); }
-  if (state == OVER) {
-    canvas.fillRoundRect(36, 28, 168, 60, 6, rgb(12, 36, 70)); canvas.drawRoundRect(36, 28, 168, 60, 6, rgb(235, 90, 70));
-    txt(L("CAPSIZED!","CHAVIRE !"), SCR_W / 2, 32, &fonts::Font4, rgb(255, 120, 90), textdatum_t::top_center);
-    snprintf(b, sizeof b, L("%lu   best %lu","%lu   record %lu"), (unsigned long)score, (unsigned long)best); txt(b, SCR_W / 2, 62, &fonts::Font2, TFT_WHITE, textdatum_t::top_center);
-  }
+  if (state == PAUSED) ui::pause();
+  if (state == OVER) ui::gameOver(L("CAPSIZED!", "CHAVIRE !"), score, best, (score) > 0 && (uint32_t)(score) >= (uint32_t)(best));
 }
 
 void loop() {
@@ -337,4 +334,5 @@ void icon(int x, int y) {
   drawKayak(x + 32, y + 44, 0.3f);
 }
 
+void preview(int cx, int cy) { drawKayak(cx, cy, sinf(millis() * 0.003f)); }
 }  // namespace river

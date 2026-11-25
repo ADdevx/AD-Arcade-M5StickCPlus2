@@ -19,12 +19,16 @@ static int rows = 4, bricksLeft = 0;
 static float padX = 120, padV = 0;
 static float bx, by, vx, vy;
 static bool stuck = true;
-static int lives = 3, level = 1, readyT = 0, endT = 0, animT = 0, hits = 0;
+static int lives = 3, level = 1, endT = 0, animT = 0, hits = 0;
 static uint32_t score = 0, best = 0;
+// ---- effets visuels
+struct Part { float x, y, vx, vy; uint8_t life; uint16_t col; };
+static Part parts[48]; static float trx[7], try_[7]; static int flashT = 0, padFlash = 0, shake = 0;
+static void burst(float x, float y, uint16_t col, int n) {
+  for (int i = 0; i < n; i++) for (auto& p : parts) if (!p.life) { p.x = x + rnd(0, 16) - 8; p.y = y + rnd(0, 6) - 3; p.vx = ((int)rnd(0, 100) - 50) * 0.03f; p.vy = -((int)rnd(0, 100)) * 0.025f - 0.4f; p.life = 22 + rnd(0, 14); p.col = col; break; }
+}
 
-static const uint16_t ROWCOL[MAXROWS] = {
-  rgb(230, 60, 60), rgb(240, 140, 40), rgb(240, 210, 50), rgb(70, 200, 80), rgb(60, 200, 220), rgb(70, 110, 240), rgb(170, 90, 230)
-};
+static const uint16_t ROWCOL[MAXROWS] = {P_R, P_G, P_S, P_L, P_M, P_R, P_G};
 
 static void buildLevel() {
   rows = 4 + (level - 1); if (rows > MAXROWS) rows = MAXROWS;
@@ -71,8 +75,8 @@ static bool hitBrick() {
     float nx = clampf(bx, x0, x0 + BW), ny = clampf(by, y0, y0 + BH);
     float dx = bx - nx, dy = by - ny;
     if (dx * dx + dy * dy <= BALL_R * BALL_R) {
-      if (--hp[r][c] == 0) { bricksLeft--; score += 10 * (rows - r); hits++; sfx(700 + (MAXROWS - r) * 110, 40); }
-      else { sfx(300, 40); }
+      if (--hp[r][c] == 0) { bricksLeft--; score += 10 * (rows - r); hits++; sfx(700 + (MAXROWS - r) * 110, 40); burst(x0 + BW / 2, y0 + BH / 2, ROWCOL[r], 9); }
+      else { sfx(300, 40); burst(x0 + BW / 2, y0 + BH / 2, rgb(220, 224, 240), 4); }
       return true;
     }
   }
@@ -81,6 +85,12 @@ static bool hitBrick() {
 
 static void step() {
   animT++;
+  for (auto& p : parts) if (p.life) { p.life--; p.x += p.vx; p.y += p.vy; p.vy += 0.09f; }
+  if (flashT) flashT--;
+  if (padFlash) padFlash--;
+  if (shake) shake--;
+  if (!stuck && state == PLAY) { for (int i = 6; i > 0; i--) { trx[i] = trx[i - 1]; try_[i] = try_[i - 1]; } trx[0] = bx; try_[0] = by; }
+  else for (int i = 0; i < 7; i++) { trx[i] = bx; try_[i] = by; }
   if (state == TITLE || state == OVER || state == PAUSED) { if (state == OVER) endT++; return; }
   if (state == LEVELUP) { endT++; return; }
   tilt::update();
@@ -104,54 +114,67 @@ static void step() {
       float a = rel * 1.05f + padV * 0.03f; a = clampf(a, -1.1f, 1.1f);
       float sp = baseSpeed();
       vx = sp * sinf(a); vy = -sp * cosf(a); by = PAD_Y - BALL_R;
-      sfx(440, 25);
+      sfx(440, 25); padFlash = 8; burst(bx, PAD_Y, rgb(200, 220, 255), 3);
     }
   }
   if (bricksLeft <= 0) { state = LEVELUP; endT = 0; sfx(988, 80); sfx(1318, 80, false); sfx(1760, 160, false); return; }
   if (by > SCR_H + BALL_R) {
     if (--lives <= 0) { gameOver(); return; }
-    sfx(200, 100); sfx(110, 160, false); stick();
+    sfx(200, 100); sfx(110, 160, false); shake = 12; stick();
   }
 }
 
+static void backdrop() {
+  // pixel art : aplats nets, pas de degrade. Ciel noir, lune, skyline sombre avec fenetres dorees (change de silhouette selon le niveau)
+  ui::night(76);
+  canvas.fillRect(0, 76, SCR_W, 59, rgb(40, 28, 96));
+  int th = (level - 1) & 3;
+  canvas.fillCircle(210, 100, 13, P_K); canvas.fillCircle(210, 100, 12, P_M); canvas.fillCircle(209, 99, 10, P_L); canvas.fillRect(205, 95, 3, 3, P_M); canvas.fillRect(212, 102, 3, 2, P_M); canvas.fillRect(203, 92, 2, 2, P_B);
+  for (int x = 0; x < SCR_W; x += 8) {
+    uint32_t h = (uint32_t)((x / 8) * 2246822519u + th * 31); int hh = th & 1 ? 8 + (h >> 20) % 10 : 10 + (h >> 20) % 24;
+    canvas.fillRect(x, SCR_H - hh - 1, 8, hh + 1, P_K); canvas.fillRect(x + 1, SCR_H - hh, 6, hh, P_M); canvas.fillRect(x + 1, SCR_H - hh, 6, 1, P_L); canvas.fillRect(x + 6, SCR_H - hh + 1, 1, hh - 1, P_D);
+    if (!(th & 1) && ((h >> 12) & 3) == 0) canvas.fillRect(x + 3, SCR_H - hh + 4, 2, 2, P_G);
+  }
+}
+static void brick(int x, int y, uint16_t col, uint16_t lt, uint16_t dk, int hpv) {
+  if (hpv == 2) { col = P_L; lt = P_B; dk = P_M; }
+  pxBox(x, y, BW, BH, col, lt, dk);
+  if (hpv == 2) { canvas.drawPixel(x + 2, y + BH - 3, P_K); canvas.drawPixel(x + BW - 3, y + BH - 3, P_K); }
+}
 static void render() {
-  canvas.fillScreen(rgb(8, 10, 26));
-  // briques
-  for (int r = 0; r < rows; r++) for (int c = 0; c < COLS; c++) if (hp[r][c]) {
-    int x = 1 + c * PITCH_X, y = TOP + r * PITCH_Y;
-    uint16_t col = ROWCOL[r];
-    canvas.fillRect(x, y, BW, BH, col);
-    canvas.drawFastHLine(x, y, BW, rgb(255, 255, 255 - 60));
-    canvas.drawFastHLine(x, y + BH - 1, BW, rgb(40, 40, 60));
-    if (hp[r][c] == 2) canvas.drawRect(x, y, BW, BH, rgb(255, 255, 255));
-  }
-  // raquette
+  backdrop();
+  int sx = shake ? (int)rnd(0, 4) - 2 : 0;
+  static const uint16_t BODY[MAXROWS] = {P_R, P_G, P_S, P_L, P_M, P_R, P_G}, DK[MAXROWS] = {P_D, P_R, P_M, P_M, P_D, P_D, P_R};
+  for (int r = 0; r < rows; r++) for (int c = 0; c < COLS; c++) if (hp[r][c]) brick(1 + c * PITCH_X + sx, TOP + r * PITCH_Y, BODY[r], P_B, DK[r], hp[r][c]);
+  for (auto& p : parts) if (p.life) { int sz = p.life > 12 ? 2 : 1; canvas.fillRect((int)p.x, (int)p.y, sz, sz, p.life < 8 ? P_M : p.col); }
   int px = (int)(padX - PAD_W / 2);
-  canvas.fillRoundRect(px, PAD_Y, PAD_W, PAD_H, 2, skin::c(0, rgb(200, 210, 235))); canvas.fillRect(px + 2, PAD_Y, 6, 2, skin::c(3, rgb(240, 80, 70))); canvas.fillRect(px + PAD_W - 8, PAD_Y, 6, 2, skin::c(3, rgb(240, 80, 70)));
-  // balle
-  if (state != TITLE) { canvas.fillCircle((int)bx + 1, (int)by + 1, (int)BALL_R, rgb(40, 40, 70)); canvas.fillCircle((int)bx, (int)by, (int)BALL_R, g_skin ? skin::c(2, TFT_WHITE) : TFT_WHITE); }
+  uint16_t body = skin::c(0, P_L), acc = skin::c(3, P_R);
+  pxBox(px, PAD_Y - 1, PAD_W, PAD_H + 2, body, P_B, P_M);
+  uint16_t glow = padFlash ? P_B : acc;
+  canvas.fillRect(px + 1, PAD_Y, 6, PAD_H, glow); canvas.fillRect(px + PAD_W - 7, PAD_Y, 6, PAD_H, glow);
+  canvas.fillRect(px + PAD_W / 2 - 4, PAD_Y, 8, PAD_H, P_M);
+  { int fl = 2 + (animT & 1) + (int)fabsf(padV); int yy = PAD_Y + PAD_H + 1;
+    canvas.fillTriangle(px + 11, yy, px + 17, yy, px + 14, yy + fl + 1, P_K); canvas.fillTriangle(px + 12, yy, px + 16, yy, px + 14, yy + fl, P_G);
+    canvas.fillTriangle(px + PAD_W - 17, yy, px + PAD_W - 11, yy, px + PAD_W - 14, yy + fl + 1, P_K); canvas.fillTriangle(px + PAD_W - 16, yy, px + PAD_W - 12, yy, px + PAD_W - 14, yy + fl, P_G); }
+  if (state != TITLE) {
+    uint16_t bc = g_skin ? skin::c(2, P_B) : P_B;
+    if (!stuck) { canvas.fillCircle((int)trx[1], (int)try_[1], 2, P_L); canvas.fillCircle((int)trx[3], (int)try_[3], 1, P_M); canvas.fillCircle((int)trx[5], (int)try_[5], 1, P_D); }
+    pxDisc((int)bx, (int)by, 3, bc, P_B, P_L);
+  }
   // HUD
-  canvas.fillRect(0, 0, SCR_W, HUD_H, rgb(16, 18, 34)); canvas.drawFastHLine(0, HUD_H, SCR_W, rgb(60, 70, 120));
+  canvas.fillRect(0, 0, SCR_W, HUD_H, P_D); canvas.fillRect(0, HUD_H, SCR_W, 1, P_K); canvas.fillRect(0, HUD_H - 1, SCR_W, 1, P_M);
   char b[24];
-  snprintf(b, sizeof b, "%lu", (unsigned long)score); txt(b, 6, 1, &fonts::Font2, TFT_WHITE);
-  snprintf(b, sizeof b, L("LVL %d","NIV %d"), level); txt(b, SCR_W / 2, 1, &fonts::Font2, rgb(255, 210, 80), textdatum_t::top_center);
-  for (int i = 0; i < lives; i++) canvas.fillCircle(SCR_W - 8 - i * 10, 7, 3, TFT_WHITE);
+  snprintf(b, sizeof b, "%lu", (unsigned long)score); txt(b, 6, 1, &fonts::Font2, P_B);
+  snprintf(b, sizeof b, L("LVL %d","NIV %d"), level); txt(b, SCR_W / 2, 1, &fonts::Font2, P_G, textdatum_t::top_center);
+  for (int i = 0; i < lives; i++) { int hx = SCR_W - 10 - i * 12, hy = 3; canvas.fillRect(hx - 4, hy - 1, 9, 8, P_K); canvas.fillRect(hx - 3, hy, 3, 3, P_R); canvas.fillRect(hx + 1, hy, 3, 3, P_R); canvas.fillRect(hx - 3, hy + 2, 7, 2, P_R); canvas.fillRect(hx - 2, hy + 4, 5, 1, P_R); canvas.fillRect(hx - 1, hy + 5, 3, 1, P_R); canvas.drawPixel(hx - 2, hy + 1, P_B); }
   if (state == TITLE) {
-    canvas.fillRoundRect(16, 70, 208, 52, 6, rgb(16, 18, 34)); canvas.drawRoundRect(16, 70, 208, 52, 6, rgb(120, 140, 220));
-    txt(L("BREAKOUT","CASSE-BRIQUES"), SCR_W / 2, 74, &fonts::Font4, rgb(255, 210, 80), textdatum_t::top_center);
-    if (best > 0) { snprintf(b, sizeof b, L("best %lu","record %lu"), (unsigned long)best); txt(b, SCR_W - 4, 124, &fonts::Font0, rgb(255, 230, 120), textdatum_t::top_right); }
+    canvas.fillRoundRect(16, 70, 208, 52, 6, P_D); canvas.drawRoundRect(16, 70, 208, 52, 6, P_L);
+    txt(L("BREAKOUT","CASSE-BRIQUES"), SCR_W / 2, 74, &fonts::Font4, P_G, textdatum_t::top_center);
+    if (best > 0) { snprintf(b, sizeof b, L("best %lu","record %lu"), (unsigned long)best); txt(b, SCR_W - 4, 124, &fonts::Font0, P_G, textdatum_t::top_right); }
   }
-  if (state == PAUSED) { canvas.fillRoundRect(80, 84, 80, 28, 5, rgb(16, 18, 34)); txt("PAUSE", SCR_W / 2, 88, &fonts::Font4, TFT_WHITE, textdatum_t::top_center); }
-  if (state == LEVELUP) {
-    canvas.fillRoundRect(40, 60, 160, 54, 6, rgb(16, 18, 34)); canvas.drawRoundRect(40, 60, 160, 54, 6, rgb(70, 200, 80));
-    txt(L("LEVEL CLEAR!","NIVEAU REUSSI !"), SCR_W / 2, 66, &fonts::Font2, rgb(70, 200, 80), textdatum_t::top_center);
-    snprintf(b, sizeof b, "score %lu", (unsigned long)score); txt(b, SCR_W / 2, 84, &fonts::Font2, TFT_WHITE, textdatum_t::top_center);
-  }
-  if (state == OVER) {
-    canvas.fillRoundRect(36, 60, 168, 62, 6, rgb(16, 18, 34)); canvas.drawRoundRect(36, 60, 168, 62, 6, rgb(230, 80, 70));
-    txt("GAME OVER", SCR_W / 2, 64, &fonts::Font4, rgb(230, 80, 70), textdatum_t::top_center);
-    snprintf(b, sizeof b, L("score %lu  best %lu","score %lu  record %lu"), (unsigned long)score, (unsigned long)best); txt(b, SCR_W / 2, 92, &fonts::Font2, TFT_WHITE, textdatum_t::top_center);
-  }
+  if (state == PAUSED) ui::pause();
+  if (state == LEVELUP) { char b2[24]; snprintf(b2, sizeof b2, "+%lu", (unsigned long)score); ui::notice(L("LEVEL CLEAR!", "NIVEAU REUSSI !"), b2, L("A : next level", "A : niveau suivant"), P_S); }
+  if (state == OVER) ui::gameOver("GAME OVER", score, best, score > 0 && score >= best);
 }
 
 void loop() {
@@ -165,6 +188,7 @@ void loop() {
     case PAUSED: if (p || a) { state = PLAY; sfx(660, 50); } break;
     case LEVELUP: if (a && endT > 40) { level++; buildLevel(); stick(); state = PLAY; sfx(660, 40); } break;
     case OVER: if (a && endT > 40) { reset(); state = PLAY; sfx(660, 40); } break;
+    default: break;
   }
   while (acc >= STEP_US) { step(); acc -= STEP_US; }
   render();
@@ -173,11 +197,11 @@ void loop() {
 }
 
 void icon(int x, int y) {
-  canvas.fillRoundRect(x, y, 64, 64, 6, rgb(8, 10, 26));
-  for (int r = 0; r < 4; r++) for (int c = 0; c < 4; c++) if (!(r == 2 && c == 1)) canvas.fillRect(x + 4 + c * 15, y + 6 + r * 8, 13, 6, ROWCOL[r]);
-  canvas.fillCircle(x + 40, y + 42, 3, TFT_WHITE);
-  canvas.drawLine(x + 36, y + 36, x + 40, y + 42, rgb(120, 130, 170));
-  canvas.fillRoundRect(x + 20, y + 54, 26, 4, 2, rgb(200, 210, 235));
+  canvas.fillRoundRect(x, y, 64, 64, 6, P_D);
+  for (int r = 0; r < 4; r++) for (int c = 0; c < 4; c++) if (!(r == 2 && c == 1)) pxBox(x + 3 + c * 15, y + 5 + r * 9, 14, 8, ROWCOL[r], P_B, r == 1 ? P_R : P_M);
+  pxDisc(x + 40, y + 42, 3, P_B, P_B, P_L);
+  canvas.fillRect(x + 36, y + 35, 2, 2, P_M); canvas.fillRect(x + 34, y + 31, 2, 2, P_D);
+  pxBox(x + 18, y + 53, 30, 6, P_L, P_B, P_M); canvas.fillRect(x + 19, y + 54, 5, 4, P_R); canvas.fillRect(x + 42, y + 54, 5, 4, P_R);
 }
 
 }  // namespace breakout

@@ -25,11 +25,9 @@ static uint32_t best = 0;
 struct Chunk { float x, y, w, vy; uint16_t col; bool on; }; static Chunk chunks[8];
 struct Star { uint8_t x, y, b; }; static Star stars[40];
 
-static uint16_t hsv(int h, float s, float v) {
-  h %= 360; float c = v * s, x = c * (1 - fabsf(fmodf(h / 60.f, 2) - 1)), m = v - c, r, g, b;
-  if (h < 60) { r = c; g = x; b = 0; } else if (h < 120) { r = x; g = c; b = 0; } else if (h < 180) { r = 0; g = c; b = x; }
-  else if (h < 240) { r = 0; g = x; b = c; } else if (h < 300) { r = x; g = 0; b = c; } else { r = c; g = 0; b = x; }
-  return rgb((int)((r + m) * 255), (int)((g + m) * 255), (int)((b + m) * 255));
+static uint16_t hsv(int h, float s, float v) {            // (nom conserve) : teinte -> palette commune
+  static const uint16_t PC[5] = {P_R, P_G, P_S, P_L, P_B};
+  int k = (((h % 360) + 360) % 360) / 72; (void)s; (void)v; return PC[k];
 }
 static inline float layerY(int i) { return SCR_H - (i + 1) * BH + cam; }          // y ecran du haut du bloc i
 static inline uint8_t hueOf(int i) { return (uint8_t)((i * 6) % 240); }              // teinte 0..239 -> x1.5 = 0..360
@@ -105,47 +103,45 @@ static void step() {
 static void drawBlock(float x, float y, float w, uint16_t col) {
   int ix = (int)(x + 0.5f), iy = (int)(y + 0.5f), iw = (int)(w + 0.5f);
   if (iw < 1) return;
-  canvas.fillRect(ix, iy, iw, BH, col);
-  canvas.drawFastHLine(ix, iy, iw, rgb(255, 255, 255));
-  canvas.fillRect(ix, iy + BH - 2, iw, 2, rgb(0, 0, 0));
-  canvas.drawRect(ix, iy, iw, BH, rgb(20, 20, 40));
+  uint16_t dk = col == P_R ? P_D : P_M;
+  pxBox(ix, iy, iw, BH, col, P_B, dk);
+  for (int wx = ix + 4; wx + 2 < ix + iw - 3; wx += 6) canvas.fillRect(wx, iy + 3, 2, 2, P_D);       // fenetres
 }
-static uint16_t lerp565(int r1, int g1, int b1, int r2, int g2, int b2, float t) { return rgb(r1 + (int)((r2 - r1) * t), g1 + (int)((g2 - g1) * t), b1 + (int)((b2 - b1) * t)); }
 
 static void render() {
-  // ciel : devient de plus en plus sombre avec la hauteur
-  float h = fminf(1.f, n / 40.f);
-  for (int y = 0; y < SCR_H; y += 5) {
-    float t = y / (float)SCR_H;
-    uint16_t c = lerp565(int(40 - h * 34 + t * 10), int(60 - h * 52 + t * 40), int(120 - h * 96 + t * 50), int(18 - h * 14), int(20 - h * 16), int(50 - h * 40), 1 - t);
-    canvas.fillRect(0, y, SCR_W, 5, c);
+  // ciel : bandes plates, de plus en plus sombres avec la hauteur
+  static const uint16_t SKY[3][5] = {{P_D, P_M, P_M, P_L, P_L}, {P_K, P_D, P_D, P_M, P_M}, {P_K, P_K, P_D, P_D, P_D}};
+  int stage = n > 30 ? 2 : (n > 12 ? 1 : 0);
+  for (int k = 0; k < 5; k++) canvas.fillRect(0, k * 27, SCR_W, 27, SKY[stage][k]);
+  if (n > 8) for (auto &s : stars) { int sy = ((int)s.y + (int)(cam * 0.25f)) % SCR_H; canvas.fillRect(s.x, sy, 2, 2, s.b > 150 ? P_B : P_L); }
+  // soleil + nuages (bas de la tour) puis skyline et sol
+  if (cam < SCR_H) {
+    int sy = 34 + (int)(cam * 0.35f);
+    pxDisc(188, sy, 11, P_G, P_B, P_R);
+    for (int i = 0; i < 3; i++) { int cx = ((i * 97 + animT / 3 + i * 17) % (SCR_W + 60)) - 30, cy = 22 + i * 20 + (int)(cam * 0.5f); canvas.fillRect(cx - 15, cy - 1, 30, 9, P_K); canvas.fillRect(cx - 14, cy, 28, 7, P_B); canvas.fillRect(cx - 8, cy - 4, 14, 5, P_K); canvas.fillRect(cx - 7, cy - 3, 12, 5, P_B); canvas.fillRect(cx - 14, cy + 5, 28, 2, P_L); }
+    int gy = (int)(SCR_H + cam);
+    for (int x = 0; x < SCR_W; x += 10) { uint32_t hh = (uint32_t)(x * 2654435761u); int bh = 14 + (hh >> 20) % 34; canvas.fillRect(x, gy - bh, 10, bh, P_K); canvas.fillRect(x + 1, gy - bh + 1, 8, bh - 1, (hh >> 9) & 1 ? P_D : P_M); canvas.fillRect(x + 1, gy - bh + 1, 8, 1, P_L); if (((hh >> 12) & 3) == 0) canvas.fillRect(x + 3, gy - bh + 4, 2, 2, P_G); }
+    canvas.fillRect(0, gy - 1, SCR_W, 5, P_K); canvas.fillRect(0, gy, SCR_W, 2, P_L);
   }
-  if (n > 8) for (auto &s : stars) { int sy = ((int)s.y + (int)(cam * 0.25f)) % SCR_H; uint8_t b = (uint8_t)(s.b * fminf(1.f, (n - 8) / 12.f)); canvas.drawPixel(s.x, sy, rgb(b, b, b)); }
-  // sol (visible au debut)
-  if (cam < SCR_H) canvas.fillRect(0, (int)(SCR_H + cam - 1), SCR_W, 4, rgb(20, 24, 40));
   // tour
   for (int i = 0; i < n; i++) { float y = layerY(i); if (y > SCR_H || y < -BH) continue; drawBlock(LY[i].x, y, LY[i].w, hsv(LY[i].hue * 3 / 2, 0.55f, 0.95f)); }
   // effet "parfait"
-  if (perfectT > 0 && perfN > 0) { float y = layerY(perfN); int k = 18 - perfectT; canvas.drawRect((int)perfX - k, (int)y - k, (int)perfW + 2 * k, BH + 2 * k, TFT_WHITE); }
+  if (perfectT > 0 && perfN > 0) { float y = layerY(perfN); int k = 18 - perfectT; canvas.drawRect((int)perfX - k, (int)y - k, (int)perfW + 2 * k, BH + 2 * k, P_G); }
   // morceaux qui tombent
   for (auto &c : chunks) if (c.on) drawBlock(c.x, c.y, c.w, c.col);
   // bloc qui glisse
   if (state != OVER) drawBlock(mx, layerY(n), mw, hsv(mhue * 3 / 2, 0.55f, 0.95f));
   // infos
   char b[32];
-  if (state != TITLE) { snprintf(b, sizeof b, "%d", n - 1); txtO(b, SCR_W / 2, 2, &fonts::Font4, TFT_WHITE, rgb(10, 10, 30), textdatum_t::top_center); }
-  if (state != TITLE && combo >= 2) { snprintf(b, sizeof b, L("PERFECT x%d","PARFAIT x%d"), combo); txtO(b, SCR_W / 2, 26, &fonts::Font2, rgb(255, 230, 90), rgb(60, 30, 0), textdatum_t::top_center); }
+  if (state != TITLE) { snprintf(b, sizeof b, "%d", n - 1); txtO(b, SCR_W / 2, 2, &fonts::Font4, P_B, P_K, textdatum_t::top_center); }
+  if (state != TITLE && combo >= 2) { snprintf(b, sizeof b, L("PERFECT x%d","PARFAIT x%d"), combo); txtO(b, SCR_W / 2, 26, &fonts::Font2, P_G, P_K, textdatum_t::top_center); }
   if (state == TITLE) {
-    canvas.fillRoundRect(20, 14, 200, 52, 7, rgb(10, 12, 32)); canvas.drawRoundRect(20, 14, 200, 52, 7, rgb(120, 140, 230));
-    txt("STACK", SCR_W / 2, 18, &fonts::Font4, rgb(255, 210, 80), textdatum_t::top_center, 1.2f);
-    if (best > 0) { snprintf(b, sizeof b, L("best %lu","record %lu"), (unsigned long)best); txt(b, SCR_W / 2, 124, &fonts::Font2, rgb(255, 230, 120), textdatum_t::top_center); }
+    ui::window(30, 10, 180, 60, P_G, "STACK");
+    txt(L("Drop blocks, build high!", "Empile le plus haut !"), SCR_W / 2, 36, &fonts::Font2, P_K, textdatum_t::top_center);
+    if (best > 0) { snprintf(b, sizeof b, L("BEST %lu","RECORD %lu"), (unsigned long)best); txt(b, SCR_W / 2, 52, &fonts::Font0, P_D, textdatum_t::top_center); }
   }
-  if (state == PAUSED) { canvas.fillRoundRect(80, 50, 80, 28, 5, rgb(10, 12, 32)); txt("PAUSE", SCR_W / 2, 54, &fonts::Font4, TFT_WHITE, textdatum_t::top_center); }
-  if (state == OVER) {
-    canvas.fillRoundRect(40, 34, 160, 62, 6, rgb(10, 12, 32)); canvas.drawRoundRect(40, 34, 160, 62, 6, rgb(230, 80, 70));
-    txt("GAME OVER", SCR_W / 2, 38, &fonts::Font4, rgb(230, 80, 70), textdatum_t::top_center);
-    snprintf(b, sizeof b, L("%d blocks   best %lu","%d blocs   record %lu"), n - 1, (unsigned long)best); txt(b, SCR_W / 2, 66, &fonts::Font2, TFT_WHITE, textdatum_t::top_center);
-  }
+  if (state == PAUSED) ui::pause();
+  if (state == OVER) ui::gameOver("GAME OVER", (uint32_t)(n > 1 ? n - 1 : 0), best, ((uint32_t)(n > 1 ? n - 1 : 0)) > 0 && (uint32_t)((uint32_t)(n > 1 ? n - 1 : 0)) >= (uint32_t)(best));
 }
 
 void loop() {
@@ -166,12 +162,12 @@ void loop() {
 }
 
 void icon(int x, int y) {
-  canvas.fillRoundRect(x, y, 64, 64, 6, rgb(40, 60, 130));
-  canvas.fillRect(x, y + 56, 64, 8, rgb(20, 24, 40));
-  static const int W[5] = {40, 34, 26, 26, 18}, X[5] = {12, 15, 18, 18, 22};
-  for (int i = 0; i < 5; i++) { int by = y + 56 - (i + 1) * 9; uint16_t c = hsv(i * 55, 0.55f, 0.95f); canvas.fillRect(x + X[i], by, W[i], 9, c); canvas.drawFastHLine(x + X[i], by, W[i], TFT_WHITE); canvas.drawRect(x + X[i], by, W[i], 9, rgb(20, 20, 40)); }
-  canvas.fillRect(x + 36, y + 4, 22, 9, hsv(280, 0.55f, 0.95f)); canvas.drawRect(x + 36, y + 4, 22, 9, rgb(20, 20, 40));
-  canvas.fillRect(x + 50, y + 22, 10, 9, hsv(280, 0.55f, 0.95f)); canvas.drawRect(x + 50, y + 22, 10, 9, rgb(20, 20, 40));   // morceau coupe qui tombe
+  canvas.fillRoundRect(x, y, 64, 64, 6, P_M);
+  canvas.fillRect(x, y + 36, 64, 28, P_D); canvas.fillRect(x + 2, y + 56, 60, 6, P_K); canvas.fillRect(x + 2, y + 56, 60, 1, P_L);
+  static const int W[5] = {42, 36, 28, 28, 20}, X[5] = {11, 14, 18, 18, 22};
+  static const uint16_t C[5] = {P_R, P_G, P_S, P_L, P_B};
+  for (int i = 0; i < 5; i++) { int by = y + 56 - (i + 1) * 9; pxBox(x + X[i], by, W[i], 10, C[i], P_B, C[i] == P_R ? P_D : P_M); for (int wx = x + X[i] + 4; wx + 2 < x + X[i] + W[i] - 3; wx += 6) canvas.fillRect(wx, by + 4, 2, 2, P_D); }
+  pxBox(x + 38, y + 4, 22, 10, P_G, P_B, P_M);
 }
 
 }  // namespace stack

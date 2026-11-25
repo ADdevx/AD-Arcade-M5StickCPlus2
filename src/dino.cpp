@@ -88,7 +88,7 @@ static int moonPhase = 6;
 // dino
 static float dinoX = 0, dinoY = GROUND_YPOS, jumpV = 0;
 static bool jumping = false, reachedMin = false, speedDrop = false, ducking = false, relPending = false;
-static int jumpBuf = 0, animT = 0, blinkTimer = 0, blinkDelay = 120, blinkFor = 0;
+static int jumpBuf = 0, animT = 0, blinkDelay = 120, blinkFor = 0;
 static bool duckHeld = false;
 
 // decor

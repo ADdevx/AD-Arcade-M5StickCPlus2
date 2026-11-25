@@ -13,7 +13,7 @@ static State state = TITLE;
 static Preferences pr;
 static uint32_t last = 0, acc = 0;
 static float shipX = 120, shipV = 0;
-static int lives = 3, invul = 0, readyT = 0, overT = 0, animT = 0;
+static int lives = 3, invul = 0, overT = 0, animT = 0;
 static uint32_t score = 0, best = 0;
 static float speedMul = 1.0f; static int spawnT = 0;
 struct Met { float x, y, vx, vy, r, ang, spin; uint8_t shape[8]; bool on; };
@@ -55,7 +55,7 @@ static void gameOver() {
 
 static void step() {
   animT++;
-  for (auto &s : stars) { s.y += s.v * (state == PLAY ? 1.f + speedMul * 0.4f : 1.f); if (s.y > SCR_H) { s.y = 0; s.x = rnd(0, SCR_W); } }
+  for (auto &s : stars) { bool big = s.v > 1.5f; canvas.fillRect((int)s.x, (int)s.y, big ? 2 : 1, big ? 2 : 1, big ? P_B : P_L); }
   for (auto &p : sparks) if (p.life > 0) { p.x += p.vx; p.y += p.vy; p.life--; }
   if (state == TITLE) return;
   if (state == OVER) { overT++; for (auto &m : mets) if (m.on) { m.y += m.vy; m.ang += m.spin; if (m.y > SCR_H + 20) m.on = false; } return; }
@@ -84,26 +84,46 @@ static void step() {
 
 static void drawMeteor(const Met &m) {
   int cx = (int)m.x, cy = (int)m.y;
+  float vl = sqrtf(m.vx * m.vx + m.vy * m.vy); if (vl < 0.01f) vl = 1; float dx = -m.vx / vl, dy = -m.vy / vl;       // direction de la traine (derriere)
+  static const uint16_t TC[5] = {P_G, rgb(236, 130, 50), P_R, rgb(120, 50, 130), rgb(60, 40, 120)};
+  for (int k = 4; k >= 0; k--) {                                                                                 // traine : 5 disques de plus en plus petits et froids
+    int rr = (int)(m.r * (0.85f - k * 0.13f)); if (rr < 1) rr = 1; int d = (int)(m.r * (0.5f + k * 0.75f));
+    canvas.fillCircle(cx + (int)(dx * d), cy + (int)(dy * d), rr, TC[k]);
+  }
   int px[8], py[8];
   for (int i = 0; i < 8; i++) { float a = m.ang + i * 0.7854f, r = m.r * m.shape[i] / 100.f; px[i] = cx + (int)(cosf(a) * r); py[i] = cy + (int)(sinf(a) * r); }
-  uint16_t fill = rgb(130, 110, 95), lt = rgb(175, 150, 125), dk = rgb(70, 58, 50);
-  for (int i = 0; i < 8; i++) canvas.fillTriangle(cx, cy, px[i], py[i], px[(i + 1) & 7], py[(i + 1) & 7], (i < 3) ? lt : fill);
-  for (int i = 0; i < 8; i++) canvas.drawLine(px[i], py[i], px[(i + 1) & 7], py[(i + 1) & 7], dk);
-  if (m.r > 8) { canvas.fillCircle(cx + (int)(m.r * 0.25f * cosf(m.ang)), cy + (int)(m.r * 0.25f * sinf(m.ang)), m.r / 4, dk); }
+  const uint16_t LT = rgb(222, 172, 124), MD = rgb(164, 112, 92), DK = rgb(98, 66, 88);
+  for (int i = 0; i < 8; i++) {                                                                                  // eclairage depuis le haut-gauche
+    float am = m.ang + (i + 0.5f) * 0.7854f, dt = cosf(am) * -0.707f + sinf(am) * -0.707f;
+    canvas.fillTriangle(cx, cy, px[i], py[i], px[(i + 1) & 7], py[(i + 1) & 7], dt > 0.35f ? LT : (dt > -0.35f ? MD : DK));
+  }
+  for (int i = 0; i < 8; i++) canvas.drawLine(px[i], py[i], px[(i + 1) & 7], py[(i + 1) & 7], P_K);              // contour noir
+  if (m.r > 6) { int ox = (int)(m.r * 0.3f * cosf(m.ang + 1.0f)), oy = (int)(m.r * 0.3f * sinf(m.ang + 1.0f)); canvas.fillCircle(cx + ox, cy + oy, m.r / 4 + 1, DK); canvas.drawPixel(cx + ox - 1, cy + oy - 1, MD); }
+  if (m.r > 10) { int ox = (int)(m.r * 0.5f * cosf(m.ang + 3.6f)), oy = (int)(m.r * 0.5f * sinf(m.ang + 3.6f)); canvas.fillCircle(cx + ox, cy + oy, 2, DK); }
+  canvas.fillRect(cx - m.r / 3, cy - m.r / 2, 2, 2, P_B);                                                        // reflet
 }
 static void drawShip(int x, int y, float bank, bool flame) {
-  int w = 9 + (int)(bank * 0), sh = (int)(bank * 2);
-  uint16_t body = skin::c(0, rgb(210, 220, 235)), dk = skin::c(1, rgb(90, 100, 130)), red = skin::c(3, rgb(230, 60, 50));
-  if (flame) { int f = 4 + (animT & 3) * 2; canvas.fillTriangle(x - 3, y + 6, x + 3, y + 6, x, y + 8 + f, rgb(255, 170, 40)); canvas.fillTriangle(x - 1, y + 6, x + 1, y + 6, x, y + 6 + f / 2, rgb(255, 240, 150)); }
-  canvas.fillTriangle(x - w, y + 7, x, y - 2, x + w, y + 7, dk);                                       // ailes
-  canvas.fillTriangle(x - 3 + sh, y + 8, x + sh, y - 11, x + 3 + sh, y + 8, body);                    // fuselage
-  canvas.fillTriangle(x - 2 + sh, y - 4, x + sh, y - 11, x + 2 + sh, y - 4, red);
-  canvas.fillCircle(x + sh, y - 1, 2, rgb(100, 200, 255));
-  canvas.fillRect(x - w, y + 5, 3, 3, red); canvas.fillRect(x + w - 2, y + 5, 3, 3, red);
+  int w = 10, sh = (int)(bank * 2);
+  uint16_t body = skin::c(0, P_L), dk = skin::c(1, P_M), red = skin::c(3, P_R), lt = skin::c(2, P_B);
+  if (flame) { int f = 4 + (animT & 3) * 2; canvas.fillTriangle(x - 4, y + 7, x + 4, y + 7, x, y + 9 + f + 2, P_K); canvas.fillTriangle(x - 3, y + 7, x + 3, y + 7, x, y + 8 + f, P_G); canvas.fillTriangle(x - 1, y + 7, x + 1, y + 7, x, y + 7 + f / 2, P_B); }
+  canvas.fillTriangle(x - w - 1, y + 9, x, y - 3, x + w + 1, y + 9, P_K);                                    // contour des ailes
+  canvas.fillTriangle(x - w, y + 8, x, y - 2, x + w, y + 8, dk);
+  canvas.fillTriangle(x - 5 + sh, y + 10, x + sh, y - 13, x + 5 + sh, y + 10, P_K);                         // contour du fuselage
+  canvas.fillTriangle(x - 4 + sh, y + 9, x + sh, y - 12, x + 4 + sh, y + 9, body);
+  canvas.fillTriangle(x + sh, y - 12, x + sh, y + 9, x + 4 + sh, y + 9, dk);                               // cote ombre
+  canvas.fillTriangle(x - 2 + sh, y - 5, x + sh, y - 12, x + 2 + sh, y - 5, red);
+  canvas.fillRect(x - 1 + sh, y - 3, 3, 4, P_K); canvas.fillRect(x + sh, y - 2, 1, 2, P_S);               // cockpit
+  canvas.fillRect(x - w, y + 6, 3, 3, red); canvas.fillRect(x + w - 2, y + 6, 3, 3, red);
+  canvas.drawPixel(x - 2 + sh, y + 2, lt);
 }
-
+static void backdrop() {
+  ui::night(100);
+  canvas.fillRect(0, 100, SCR_W, 35, rgb(40, 28, 96)); canvas.fillRect(0, 100, SCR_W, 1, P_K);
+  for (int i = 0; i < 3; i++) canvas.fillCircle(70 + i * 70 + (i & 1) * 20, 40 + i * 14, 20 - i * 3, rgb(34 + i * 4, 24, 86 + i * 6));   // nebuleuse
+  canvas.fillCircle(26, 112, 12, P_K); canvas.fillCircle(26, 112, 11, P_R); canvas.fillCircle(24, 110, 9, P_G); canvas.fillCircle(21, 107, 3, P_B); canvas.fillRect(27, 116, 4, 2, P_R);   // planete
+}
 static void render() {
-  canvas.fillScreen(rgb(4, 6, 20));
+  backdrop();
   for (auto &s : stars) { uint8_t b = 90 + (int)(s.v * 70); canvas.drawPixel((int)s.x, (int)s.y, rgb(b, b, b)); if (s.v > 1.5f) canvas.drawPixel((int)s.x, (int)s.y - 1, rgb(b / 2, b / 2, b / 2)); }
   for (auto &m : mets) if (m.on) drawMeteor(m);
   for (auto &p : sparks) if (p.life > 0) canvas.fillRect((int)p.x, (int)p.y, 2, 2, p.life > 12 ? rgb(255, 220, 120) : rgb(230, 90, 40));
@@ -111,20 +131,17 @@ static void render() {
   if (state == TITLE) drawShip(SCR_W / 2, 100, 0, true);
   if (state == PLAY || state == PAUSED || state == READY) {
     char b[16]; snprintf(b, sizeof b, "%lu", (unsigned long)(score / 10));
-    txt(b, 6, 4, &fonts::Font2, TFT_WHITE);
-    for (int i = 0; i < lives; i++) { int hx = SCR_W - 14 - i * 14; canvas.fillTriangle(hx - 4, hx * 0 + 14, hx, 4, hx + 4, 14, skin::c(0, rgb(210, 220, 235))); }
+    int sw = (int)strlen(b) * 8 + 10; canvas.fillRect(2, 2, sw, 17, P_K); canvas.fillRect(3, 3, sw - 2, 15, P_D); canvas.fillRect(3, 3, sw - 2, 1, P_M);
+    txt(b, 7, 3, &fonts::Font2, P_B);
+    { int lw = lives * 14 + 6, lx = SCR_W - lw - 2; canvas.fillRect(lx, 2, lw, 17, P_K); canvas.fillRect(lx + 1, 3, lw - 2, 15, P_D); canvas.fillRect(lx + 1, 3, lw - 2, 1, P_M); }
+    for (int i = 0; i < lives; i++) { int hx = SCR_W - 12 - i * 14; canvas.fillTriangle(hx - 5, 17, hx, 4, hx + 5, 17, P_K); canvas.fillTriangle(hx - 3, 16, hx, 6, hx + 3, 16, skin::c(0, P_L)); canvas.fillTriangle(hx, 6, hx, 16, hx + 3, 16, P_M); }
   }
   if (state == TITLE) {
-    txtO(L("METEORS","METEORES"), SCR_W / 2, 10, &fonts::Font4, rgb(255, 200, 60), rgb(90, 30, 0), textdatum_t::top_center);
-    if (best > 0) { char b[24]; snprintf(b, sizeof b, L("best %lu","record %lu"), (unsigned long)best); txt(b, SCR_W / 2, 74, &fonts::Font2, rgb(255, 230, 120), textdatum_t::top_center); }
+    txtO(L("METEORS","METEORES"), SCR_W / 2, 10, &fonts::Font4, P_G, P_K, textdatum_t::top_center, 1.5f);
+    if (best > 0) { char b[24]; snprintf(b, sizeof b, L("best %lu","record %lu"), (unsigned long)best); txt(b, SCR_W / 2, 74, &fonts::Font2, P_G, textdatum_t::top_center); }
   }
-  if (state == PAUSED) txtO("PAUSE", SCR_W / 2, 52, &fonts::Font4, TFT_WHITE, rgb(0, 0, 0), textdatum_t::top_center);
-  if (state == OVER) {
-    canvas.fillRoundRect(40, 28, 160, 70, 6, rgb(14, 18, 44)); canvas.drawRoundRect(40, 28, 160, 70, 6, rgb(120, 140, 220));
-    txt(L("SHIP DESTROYED","VAISSEAU DETRUIT"), SCR_W / 2, 34, &fonts::Font2, rgb(255, 110, 90), textdatum_t::top_center);
-    char b[40]; snprintf(b, sizeof b, L("score %lu   best %lu","score %lu   record %lu"), (unsigned long)(score / 10), (unsigned long)best);
-    txt(b, SCR_W / 2, 56, &fonts::Font2, TFT_WHITE, textdatum_t::top_center);
-  }
+  if (state == PAUSED) ui::pause();
+  if (state == OVER) ui::gameOver("SHIP DESTROYED", (uint32_t)(score / 10), best, ((uint32_t)(score / 10)) > 0 && (uint32_t)((uint32_t)(score / 10)) >= (uint32_t)(best));
 }
 
 void loop() {
@@ -137,6 +154,7 @@ void loop() {
         case PLAY: if (p) { state = PAUSED; sfx(440, 50); } break;
     case PAUSED: if (p || a) { state = PLAY; sfx(660, 50); } break;
     case OVER: if (a && overT > 40) { reset(); state = PLAY; sfx(660, 40); } break;
+    default: break;
   }
   while (acc >= STEP_US) { if (state != PAUSED) step(); acc -= STEP_US; }
   render();
@@ -145,12 +163,13 @@ void loop() {
 }
 
 void icon(int x, int y) {
-  canvas.fillRoundRect(x, y, 64, 64, 6, rgb(4, 6, 20));
-  uint8_t sx[9] = {6, 18, 50, 58, 30, 12, 44, 55, 22}, sy[9] = {8, 40, 12, 36, 6, 22, 52, 56, 30};
-  for (int i = 0; i < 9; i++) canvas.drawPixel(x + sx[i], y + sy[i], rgb(200, 200, 220));
-  Met m{}; m.x = x + 44; m.y = y + 18; m.r = 11; m.ang = 0.4f; for (int i = 0; i < 8; i++) m.shape[i] = 70 + ((i * 53) % 30); drawMeteor(m);
-  m.x = x + 16; m.y = y + 28; m.r = 6; m.ang = 1.0f; drawMeteor(m);
-  animT = 0; drawShip(x + 32, y + 48, 0, true);
+  canvas.fillRoundRect(x, y, 64, 64, 6, P_K);
+  canvas.fillRect(x + 2, y + 46, 60, 16, P_D);
+  canvas.fillRect(x + 8, y + 8, 2, 2, P_B); canvas.fillRect(x + 50, y + 6, 2, 2, P_L); canvas.fillRect(x + 30, y + 4, 1, 1, P_L); canvas.fillRect(x + 56, y + 34, 2, 2, P_B);
+  canvas.fillCircle(x + 46, y + 20, 11, P_K); canvas.fillCircle(x + 46, y + 20, 10, P_M); canvas.fillCircle(x + 43, y + 17, 7, P_L); canvas.fillCircle(x + 50, y + 25, 3, P_D); canvas.fillRect(x + 40, y + 14, 3, 2, P_B);
+  canvas.fillCircle(x + 14, y + 32, 7, P_K); canvas.fillCircle(x + 14, y + 32, 6, P_M); canvas.fillCircle(x + 12, y + 30, 4, P_L); canvas.fillCircle(x + 5, y + 24, 3, P_R);
+  { int sx = x + 30, sy = y + 46; canvas.fillTriangle(sx - 11, sy + 10, sx, sy - 1, sx + 11, sy + 10, P_K); canvas.fillTriangle(sx - 9, sy + 9, sx, sy + 1, sx + 9, sy + 9, P_M); canvas.fillTriangle(sx - 5, sy + 12, sx, sy - 13, sx + 5, sy + 12, P_K); canvas.fillTriangle(sx - 4, sy + 11, sx, sy - 11, sx + 4, sy + 11, P_L); canvas.fillTriangle(sx - 2, sy - 6, sx, sy - 11, sx + 2, sy - 6, P_R); canvas.fillRect(sx, sy - 3, 2, 3, P_S); canvas.fillTriangle(sx - 3, sy + 12, sx + 3, sy + 12, sx, sy + 17, P_G); }
 }
 
+void preview(int cx, int cy) { drawShip(cx, cy, sinf(millis() * 0.003f) * 0.6f, true); }
 }  // namespace space
