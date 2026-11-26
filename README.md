@@ -2,7 +2,7 @@
 
 # AD Arcade
 
-A retro handheld game console firmware for the **M5StickC Plus2** (also built for the M5StickC Plus, M5StickS3 and M5Cardputer). Boot it, enjoy a 90s style intro, pick a game in the animated menu and play. **16 games**, including a full pixel-art adventure, medals, a daily challenge, a 2-player mode, stats, skins and a music player, all in one `.bin`.
+A retro handheld game console firmware for the **M5StickC Plus2** (also built for the M5StickC Plus, M5StickS3 and M5Cardputer). Boot it, enjoy a 90s style intro, pick a game in the animated menu and play. **18 games**, including a full pixel-art adventure, a tower defense, a pinball, medals, a daily challenge, a 2-player mode, stats, skins and a music player, all in one `.bin`.
 
 <p align="center"><img src="docs/images/menu.gif" alt="Animated menu" width="480"></p>
 
@@ -22,6 +22,28 @@ A top-down pixel-art adventure with an original hero, Kiri. Talk to the villager
 - Day/night cycle with fireflies, dynamic torch lighting in the crypt
 - Original music, medals and a final score, auto-save (Continue / New game)
 
+## New in v1.9: Pocket Siege
+
+<p align="center"><img src="docs/images/pocket_siege.png" alt="Pocket Siege" width="480"></p>
+
+A tower defense with **12 levels in 4 worlds** (Meadow, Desert, Snow, Volcano) and rising difficulty.
+
+| | |
+|---|---|
+| ![Build menu](docs/images/pocket_siege_build.png) | ![World map](docs/images/pocket_siege_map.png) |
+
+- 4 towers with 3 levels each: Archer (critical hits), Cannon (splash), Frost (slows), Storm (chain lightning)
+- 6 enemies including flyers, a healing shaman and the Ogre King boss at the end of each world
+- Radial build menu, coins and damage numbers, x2 speed
+- 1 to 3 stars per level, coins buy permanent upgrades in the Shop (damage, range, starting gold, lives, fire rate)
+- B = next spot, A = build / upgrade / sell, PWR = pause
+
+## New in v1.9: Ember Pinball
+
+<p align="center"><img src="docs/images/pinball.gif" alt="Ember Pinball" width="480"></p>
+
+An original pinball table that scrolls with the ball: 3 pop bumpers, 2 slingshots, drop targets, 3 top lanes that raise the multiplier up to x5, a kick-out saucer and ball save. **B** = left flipper, **A** = right flipper, hold **A** to launch harder, shake the console to nudge (too much = TILT).
+
 ## Games
 
 | | | |
@@ -30,6 +52,7 @@ A top-down pixel-art adventure with an original hero, Kiri. Talk to the villager
 | ![Flap Bird](docs/images/flap.png) **Flap Bird** | ![Racing](docs/images/race.png) **Racing** | ![Flight](docs/images/flight.png) **Flight** |
 | ![Fish](docs/images/fish.png) **Fish** | ![River](docs/images/river.png) **River** | ![Meteors](docs/images/meteors.png) **Meteors** |
 | ![Breakout](docs/images/breakout.png) **Breakout** | ![Invaders](docs/images/invaders.png) **Invaders** | ![Emberwood](docs/images/emberwood_title.png) **Emberwood** |
+| ![Pocket Siege](docs/images/pocket_siege.png) **Pocket Siege** | ![Ember Pinball](docs/images/pinball.png) **Ember Pinball** | |
 
 Also included: **Chrome Dino, Maze, Slalom, Stack**.
 
@@ -74,10 +97,10 @@ If tilting feels wrong, recalibrate in **Settings > Calibrate**.
 
 | Device | File | Status |
 |---|---|---|
-| M5StickC Plus2 | `AD-Arcade-M5StickCPlus2-v1.8.2.bin` | main device, tested |
-| M5StickC Plus | `AD-Arcade-M5StickCPlus-v1.8.2.bin` | community testing needed |
-| M5StickS3 | `AD-Arcade-M5StickS3-v1.8.2.bin` | earlier versions confirmed working by a tester |
-| M5Cardputer / Cardputer-ADV | `AD-Arcade-M5Cardputer-v1.8.2.bin` | community testing needed |
+| M5StickC Plus2 | `AD-Arcade-M5StickCPlus2-v1.9.0.bin` | main device, tested |
+| M5StickC Plus | `AD-Arcade-M5StickCPlus-v1.9.0.bin` | community testing needed |
+| M5StickS3 | `AD-Arcade-M5StickS3-v1.9.0.bin` | earlier versions confirmed working by a tester |
+| M5Cardputer / Cardputer-ADV | `AD-Arcade-M5Cardputer-v1.9.0.bin` | community testing needed |
 
 ## Install
 
@@ -86,7 +109,7 @@ If tilting feels wrong, recalibrate in **Settings > Calibrate**.
 **Manual:** download the `.bin` for your device from the [Releases](../../releases) page and flash it at address `0x0`:
 
 ```
-esptool.py --chip esp32 --port <your port> write_flash 0x0 AD-Arcade-M5StickCPlus2-v1.8.2.bin
+esptool.py --chip esp32 --port <your port> write_flash 0x0 AD-Arcade-M5StickCPlus2-v1.9.0.bin
 ```
 for example, port `COM3`. Use `--chip esp32s3` for the StickS3 and the Cardputer.
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.9.0
+- NEW GAME: **Ember Pinball**, an original pinball table (ember dragon theme) that scrolls with the ball: 3 pop bumpers, 2 slingshots, a drop target bank (+2500 bonus), 3 top lanes that raise the multiplier up to x5 (flippers move the lit lanes), a kick-out saucer, ball save, plunger (hold A for more power) and nudging by shaking the console (too much = TILT). B = left flipper, A = right flipper.
+- New menu icons: Meteors, Maze, Breakout, Invaders, Slalom, Stack, Racing and Lunar Lander now show real pixels from each game; Daily, 2 Players, Trophies, Stats, Music, Skins and Settings have new bold, clean symbols.
+- Pocket Siege: clear cursor (bouncing arrow + corners), selected option ringed in gold with an info bar, worlds blend into each other on the map.
+- Interface fixes: the FLAT/UPRIGHT message no longer covers the game icon, Stack title text no longer touches the window edge, new Slalom title panel.
+- NEW GAME: **Pocket Siege**, a tower defense with 12 levels in 4 worlds (Meadow, Desert, Snow, Volcano) and rising difficulty.
+- 4 towers with 3 levels each (Archer, Cannon with splash, Frost that slows, Storm with chain lightning), 6 enemies (slime, goblin runner, armored orc knight, flying bat, healing shaman, Ogre King boss at the end of each world).
+- Radial build menu, coins and damage numbers popping, critical hits, health bars, explosions, x2 speed / early wave button.
+- Earn 1 to 3 stars per level and coins to buy permanent upgrades in the Shop (damage, range, starting gold, lives, fire rate).
+
 ## v1.8.2
 - Buttons mode is now only offered in **Tetris** and **Snake** (the other games are better with tilt).
 - Tetris with buttons: B = left, A = right, **PWR = rotate** (no pause in this mode), hold A+B = hard drop. A+B no longer rotates, so pieces are not dropped by accident.

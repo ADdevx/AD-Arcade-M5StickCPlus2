@@ -7,6 +7,7 @@
 #include <M5Cardputer.h>
 #endif
 #include "common.h"
+#include "icons_art.h"
 
 M5Canvas canvas(&M5.Display);
 
@@ -27,6 +28,7 @@ bool g_quit = false;
 int  g_ctrl = 0; bool g_btnCtrl = false;     // commandes : 0 demander, 1 inclinaison, 2 boutons
 bool g_flip = false;                          // ecran retourne
 static int g_baseRot = SCR_ROT;
+uint8_t* idxBuffer() { static uint8_t* b = nullptr; if (!b) b = (uint8_t*)malloc(240 * 135); return b; }
 void applyRotation() { M5.Display.setRotation((g_baseRot + (g_flip ? 2 : 0)) & 3); }
 static const int BRI[5] = {30, 70, 120, 180, 255};
 static const uint32_t SLEEP_MS[5] = {30000, 60000, 120000, 300000, 0};
@@ -149,6 +151,8 @@ static const GameDef GAMES[] = {
   {"SNAKE",          "SNAKE",          snake::begin,    snake::loop,    snake::icon},
   {"LUNAR LANDER",   "ALUNISSAGE",     lander::begin,   lander::loop,   lander::icon},
   {"EMBERWOOD",      "EMBERWOOD",      zelda::begin,    zelda::loop,    zelda::icon},
+  {"POCKET SIEGE",   "POCKET SIEGE",   td::begin,       td::loop,       td::icon},
+  {"EMBER PINBALL",  "EMBER PINBALL",  pinball::begin,  pinball::loop,   pinball::icon},
   {"DAILY",          "DEFI DU JOUR",   daily::begin,    daily::loop,    daily::icon},
   {"2 PLAYERS",      "2 JOUEURS",        duo::begin,      duo::loop,      duo::icon},
   {"TROPHIES",       "TROPHEES",       trophy::begin,   trophy::loop,   trophy::icon},
@@ -161,7 +165,20 @@ static const int NGAMES = sizeof(GAMES) / sizeof(GAMES[0]);
 void gameBegin(int idx) { stats::play(idx); ctrl::prepare(idx); GAMES[idx].begin(); }
 void gameLoop(int idx) { GAMES[idx].loop(); }
 const char* gameName(int idx) { return L(GAMES[idx].en, GAMES[idx].fr); }
-void gameIcon(int idx, int x, int y) { GAMES[idx].icon(x, y); }
+// icones du menu au style Emberwood (tools/art/icons.py -> icons_art.h) ; sinon l'icone dessinee par le jeu
+static bool artIcon(int idx, int x, int y) {
+  if (idx < 0 || idx >= (int)sizeof(iart::ICON_FOR) || iart::ICON_FOR[idx] == 255) return false;
+  const iart::Icon& ic = iart::ICONS[iart::ICON_FOR[idx]];
+  const uint16_t* pal = iart::PAL + ic.pal; const uint8_t* p = iart::DATA + ic.data;
+  int n = 0;
+  while (n < 64 * 64) {
+    int run = p[0]; uint16_t c = pal[p[1]]; p += 2;
+    int j = n / 64, i = n - j * 64;
+    while (run > 0) { int len = 64 - i < run ? 64 - i : run; canvas.drawFastHLine(x + i, y + j, len, c); run -= len; n += len; i = 0; j++; }
+  }
+  return true;
+}
+void gameIcon(int idx, int x, int y) { if (!artIcon(idx, x, y)) GAMES[idx].icon(x, y); }
 // ----------------------------------------------------------------------------- commandes : inclinaison ou boutons
 namespace ctrl {
 // jeux (index du menu) jouables aux boutons + aide affichee sur l'ecran de choix
@@ -272,7 +289,7 @@ static void drawMenu() {
   // --- barre du haut
   canvas.fillRect(0, 0, SCR_W, 21, P_K); canvas.fillRect(0, 0, SCR_W, 19, P_D); canvas.fillRect(0, 0, SCR_W, 1, P_M); canvas.fillRect(0, 19, SCR_W, 1, P_G);
   drawBattery(4, 4, batLevel, batChg);
-  { const char* T = "AD ARCADE"; txt(T, SCR_W / 2 + 22, 3, &fonts::Font4, P_R, textdatum_t::top_center); txtO(T, SCR_W / 2 + 21, 2, &fonts::Font4, P_G, P_K, textdatum_t::top_center); }
+  if (!(toastT && t - toastT < 2200)) { const char* T = "AD ARCADE"; txt(T, SCR_W / 2 + 22, 3, &fonts::Font4, P_R, textdatum_t::top_center); txtO(T, SCR_W / 2 + 21, 2, &fonts::Font4, P_G, P_K, textdatum_t::top_center); }
   char b[24]; snprintf(b, sizeof b, "%d/%d", sel + 1, NGAMES); txt(b, SCR_W - 4, 6, &fonts::Font0, P_B, textdatum_t::top_right);
   // --- carrousel
   float pulse = (sinf(t * 0.008f) + 1) * 0.5f;
@@ -290,7 +307,7 @@ static void drawMenu() {
       canvas.fillRect(ix - 5, iy - 5, 74, 1, P_B);
       for (int k = 0; k < 4; k++) { int cx = ix - 6 + (k & 1) * 74, cy = iy - 6 + (k >> 1) * 74; canvas.fillRect(cx - 1, cy - 1, 4, 4, P_K); canvas.fillRect(cx, cy, 2, 2, P_G); }
     }
-    GAMES[idx].icon(ix, iy);
+    gameIcon(idx, ix, iy);
     if (cen < 0.5f) dim(ix, iy);
   }
   { int bob = (int)((t / 250) & 1); uint16_t ar = P_G;
@@ -306,9 +323,9 @@ static void drawMenu() {
     canvas.fillRect(x, 127, on ? 6 : 4, on ? 6 : 4, P_K); canvas.fillRect(x + 1, 128, on ? 4 : 2, on ? 4 : 2, on ? acc : P_M);
   }
   if (toastT && t - toastT < 2200) {                                                     // posture detectee par le gyroscope
-    bool flat = tilt::posture() == 0; int w = 94;
-    canvas.fillRect(SCR_W / 2 - w / 2, 23, w, 15, P_K); canvas.fillRect(SCR_W / 2 - w / 2 + 1, 24, w - 2, 13, P_B);
-    txt(flat ? L("FLAT MODE", "MODE A PLAT") : L("UPRIGHT MODE", "MODE DEBOUT"), SCR_W / 2, 27, &fonts::Font0, P_K, textdatum_t::top_center);
+    bool flat = tilt::posture() == 0; int w = 104;                                         // a la place du titre (ne cache plus l'icone)
+    canvas.fillRect(SCR_W / 2 + 21 - w / 2, 2, w, 15, P_K); canvas.fillRect(SCR_W / 2 + 22 - w / 2, 3, w - 2, 13, P_S);
+    txt(flat ? L("FLAT MODE", "MODE A PLAT") : L("UPRIGHT MODE", "MODE DEBOUT"), SCR_W / 2 + 21, 6, &fonts::Font0, P_K, textdatum_t::top_center);
   }
 }
 
@@ -321,7 +338,7 @@ static void drawSaver() {
   if (svx < 0) { svx = 0; svdx = -svdx; hit = true; } if (svx > SCR_W - 64) { svx = SCR_W - 64; svdx = -svdx; hit = true; }
   if (svy < 0) { svy = 0; svdy = -svdy; hit = true; } if (svy > SCR_H - 64) { svy = SCR_H - 64; svdy = -svdy; hit = true; }
   if (hit) svGame = (svGame + 1) % NGAMES;
-  GAMES[svGame].icon((int)svx, (int)svy);
+  gameIcon(svGame, (int)svx, (int)svy);
   present(0, 0);
 }
 
@@ -332,7 +349,7 @@ static void toMenu() {
 
 // ----------------------------------------------------------------------------- intro facon demo scene des annees 90
 static void intro() {
-  const char* SCROLL = "     WELCOME TO AD ARCADE ***  16 GAMES IN YOUR POCKET ***  TILT  PRESS  PLAY ***  "
+  const char* SCROLL = "     WELCOME TO AD ARCADE ***  18 GAMES IN YOUR POCKET ***  TILT  PRESS  PLAY ***  "
                        "TETRIS  SNAKE  LUNAR LANDER  FLAP BIRD  RACING  FLIGHT  AND MORE ***  "
                        "25 FAMOUS TUNES TO PLAY ***  CODED ON AN ESP32 WITH LOVE ***  GREETINGS TO ALL M5 FANS ***  ENJOY !!!     ";
   const int SL = strlen(SCROLL);
