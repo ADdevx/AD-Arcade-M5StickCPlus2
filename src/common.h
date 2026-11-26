@@ -9,7 +9,7 @@
 #ifndef SCR_ROT
 #define SCR_ROT 3          // 1 ou 3 : change le sens de l'ecran (donc haut/bas physiques)
 #endif
-#define AD_VERSION "1.8.2"   // version affichee dans les reglages
+#define AD_VERSION "1.9.0"   // version affichee dans les reglages
 #define SCR_W   240
 #define SCR_H   135
 
@@ -70,6 +70,7 @@ static inline const char* dns(const char* base) { return dnsFor(base, g_diff); }
 extern int  g_ctrl; extern bool g_btnCtrl;
 extern bool g_flip;           // ecran retourne de 180 deg (reglage "Screen")
 void applyRotation();
+uint8_t* idxBuffer();          // tampon d'indices 240x135 partage (Emberwood, Pocket Siege), alloue une seule fois
 namespace ctrl {
 bool supports(int gameIdx);   // le jeu a un mode boutons ?
 void prepare(int gameIdx);    // fixe g_btnCtrl pour ce jeu (reglage + dernier choix)
@@ -148,7 +149,9 @@ namespace fish { void begin(); void loop(); void icon(int x, int y); }
 namespace tetris { void begin(); void loop(); void icon(int x, int y); }
 namespace snake { void begin(); void loop(); void icon(int x, int y); }
 namespace lander { void begin(); void loop(); void icon(int x, int y); }
-namespace zelda { void begin(); void loop(); void icon(int x, int y); }   // Legend of Emberwood (aventure)
+namespace zelda { void begin(); void loop(); void icon(int x, int y); }
+namespace td { void begin(); void loop(); void icon(int x, int y); }
+namespace pinball { void begin(); void loop(); void icon(int x, int y); }   // Ember Pinball      // Pocket Siege (tower defense)   // Legend of Emberwood (aventure)
 namespace music { void begin(); void loop(); void icon(int x, int y); void end(); }
 namespace settings { void begin(); void loop(); void icon(int x, int y); }
 

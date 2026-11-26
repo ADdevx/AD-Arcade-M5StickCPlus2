@@ -136,7 +136,7 @@ static void render() {
   if (state != TITLE) { snprintf(b, sizeof b, "%d", n - 1); txtO(b, SCR_W / 2, 2, &fonts::Font4, P_B, P_K, textdatum_t::top_center); }
   if (state != TITLE && combo >= 2) { snprintf(b, sizeof b, L("PERFECT x%d","PARFAIT x%d"), combo); txtO(b, SCR_W / 2, 26, &fonts::Font2, P_G, P_K, textdatum_t::top_center); }
   if (state == TITLE) {
-    ui::window(30, 10, 180, 60, P_G, "STACK");
+    ui::window(14, 10, 212, 60, P_G, "STACK");
     txt(L("Drop blocks, build high!", "Empile le plus haut !"), SCR_W / 2, 36, &fonts::Font2, P_K, textdatum_t::top_center);
     if (best > 0) { snprintf(b, sizeof b, L("BEST %lu","RECORD %lu"), (unsigned long)best); txt(b, SCR_W / 2, 52, &fonts::Font0, P_D, textdatum_t::top_center); }
   }

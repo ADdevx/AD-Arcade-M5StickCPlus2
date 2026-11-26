@@ -194,9 +194,10 @@ static void render() {
     for (int i = 0; i < lives; i++) { int hx = SCR_W - 12 - i * 13; canvas.fillCircle(hx, 9, 4, rgb(40, 70, 190)); canvas.fillRect(hx - 3, 9, 7, 2, rgb(255, 210, 90)); }
   }
   if (state == TITLE) {
-    canvas.fillRoundRect(24, 18, 192, 98, 8, rgb(255, 255, 255)); canvas.drawRoundRect(24, 18, 192, 98, 8, rgb(30, 50, 140));
-    txt("SLALOM", SCR_W / 2, 22, &fonts::Font4, rgb(30, 50, 140), textdatum_t::top_center, 1.3f);
-    if (best > 0) { snprintf(b, sizeof b, L("best %lu","record %lu"), (unsigned long)best); txt(b, SCR_W / 2, 102, &fonts::Font0, rgb(200, 90, 30), textdatum_t::top_center); }
+    canvas.fillRoundRect(40, 26, 160, 54, 8, rgb(24, 44, 110)); canvas.drawRoundRect(40, 26, 160, 54, 8, rgb(170, 210, 250)); canvas.drawRoundRect(42, 28, 156, 50, 6, rgb(60, 90, 170));
+    txtO("SLALOM", SCR_W / 2, 31, &fonts::Font4, rgb(255, 255, 255), rgb(30, 50, 140), textdatum_t::top_center, 1.2f);
+    if (best > 0) { snprintf(b, sizeof b, L("best %lu","record %lu"), (unsigned long)best); txt(b, SCR_W / 2, 62, &fonts::Font2, rgb(200, 225, 250), textdatum_t::top_center); }
+    else if ((millis() / 500) & 1) txt(L("PRESS A", "APPUIE SUR A"), SCR_W / 2, 64, &fonts::Font0, rgb(255, 215, 90), textdatum_t::top_center);
   }
   if (state == PAUSED) ui::pause();
   if (state == OVER) ui::gameOver(L("FINISHED!", "TERMINE !"), score, best, (score) > 0 && (uint32_t)(score) >= (uint32_t)(best));

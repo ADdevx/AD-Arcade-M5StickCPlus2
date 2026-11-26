@@ -1027,7 +1027,7 @@ static void step() {
 }
 
 void begin() {
-  if (!fb) fb = (uint8_t*)malloc(240 * 135);
+  fb = idxBuffer();
   if (fb) memset(fb, CBLACK, 240 * 135);
   canvas.drawPixel(0, 0, 0x1234); swap16 = ((uint16_t*)canvas.getBuffer())[0] != 0x1234;
   tilt::load(); load(); bgm::stop();
