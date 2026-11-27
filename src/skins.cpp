@@ -18,7 +18,7 @@ static void cell(int x, int y, int w, int h) { canvas.fillRect(x, y, w, h, P_K);
 void loop() {
   int n = skin::count();
   if (M5.BtnB.wasPressed()) { sel = (sel + 1) % n; sfx(1200, 20); }
-  if (M5.BtnPWR.wasPressed()) { sel = (sel + n - 1) % n; sfx(1000, 20); }
+  if (BTN_PWR.wasPressed()) { sel = (sel + n - 1) % n; sfx(1000, 20); }
   bool ok = skin::unlocked(sel);
   if (M5.BtnA.wasPressed()) {
     if (ok) { g_skin = sel; saveSettings(); sfx(988, 50); sfx(1318, 80, false); } else sfx(300, 90);

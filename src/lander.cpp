@@ -323,11 +323,11 @@ void loop() {
   uint32_t now = micros();
   if (last == 0) last = now;
   acc += now - last; last = now; if (acc > 100000) acc = 100000;
-  bool a = M5.BtnA.wasPressed(), bb = M5.BtnB.wasPressed(), p = M5.BtnPWR.wasPressed();
+  bool a = M5.BtnA.wasPressed(), bb = M5.BtnB.wasPressed(), p = BTN_PWR.wasPressed();
   State before = state; (void)before;
   switch (state) {
     case TITLE: if (a || bb) { newGame(); sfx(660, 40); } break;
-    case FLY: case READY: if (p) { state = PAUSED; thrusting = false; stateT = stateT; sfx(440, 50); } break;
+    case FLY: case READY: if (p) { state = PAUSED; thrusting = false; sfx(440, 50); } break;
     case PAUSED: if (p) { state = FLY; sfx(660, 50); } break;
     case LANDED: if ((a || bb) && stateT > 50) { level++; genTerrain(); startRun(); sfx(660, 40); } break;
     case OVER: if ((a || bb) && stateT > 50) { newGame(); sfx(660, 40); } break;

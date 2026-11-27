@@ -358,7 +358,7 @@ static void render() {
 }
 
 void loop() {
-  bool a = M5.BtnA.wasPressed(), p = M5.BtnPWR.wasPressed(), b = M5.BtnB.wasPressed();
+  bool a = M5.BtnA.wasPressed(), p = BTN_PWR.wasPressed(), b = M5.BtnB.wasPressed();
 #ifdef WIFI_MUSIC
   int total = nSongs() + 1;                                // + l'entree "ajouter"
 #else

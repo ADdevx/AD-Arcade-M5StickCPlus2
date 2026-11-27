@@ -160,7 +160,7 @@ void loop() {
   uint32_t now = micros();
   if (last == 0) last = now;
   acc += now - last; last = now; if (acc > 100000) acc = 100000;
-  bool a = M5.BtnA.wasPressed(), p = M5.BtnPWR.wasPressed();
+  bool a = M5.BtnA.wasPressed(), p = BTN_PWR.wasPressed();
   switch (state) {
     case TITLE: if (a) { level = 1; newLevel(); state = PLAY; sfx(660, 40); } break;
         case PLAY: if (p) { state = PAUSED; sfx(440, 50); } break;

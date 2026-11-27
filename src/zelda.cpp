@@ -131,7 +131,7 @@ static void blit565(uint16_t id, int x, int y, const uint16_t* P, uint8_t fl = 0
 
 // ------------------------------------------------------------------ particules
 struct Part { float x, y, vx, vy; uint8_t c, life; bool grav; };
-static const int NPART = 140; static Part parts[NPART]; static int partN = 0;
+static const int NPART = 140; static Part parts[NPART];
 static void addPart(float x, float y, float vx, float vy, uint8_t c, int life, bool grav = false) {
   Part* p = nullptr;
   for (int i = 0; i < NPART; i++) if (!parts[i].life) { p = &parts[i]; break; }
@@ -1038,7 +1038,7 @@ void loop() {
   uint32_t now = micros();
   if (!last) last = now;
   acc += now - last; last = now; if (acc > 100000) acc = 100000;
-  aPend |= M5.BtnA.wasPressed(); bPend |= M5.BtnB.wasPressed(); pPend |= M5.BtnPWR.wasPressed();
+  aPend |= M5.BtnA.wasPressed(); bPend |= M5.BtnB.wasPressed(); pPend |= BTN_PWR.wasPressed();
   while (acc >= STEP_US) {
     aPress = aPend; bPress = bPend; pPress = pPend; aPend = bPend = pPend = false;
     step(); acc -= STEP_US;

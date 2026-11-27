@@ -138,7 +138,7 @@ static void renderAdmin() {
   if (millis() < aMsgUntil) { int w = (int)strlen(aMsg) * 8 + 16; if (w > 226) w = 226; canvas.fillRect(SCR_W / 2 - w / 2, 96, w, 20, P_K); canvas.fillRect(SCR_W / 2 - w / 2 + 1, 97, w - 2, 18, P_S); canvas.fillRect(SCR_W / 2 - w / 2 + 1, 97, w - 2, 1, P_B); txt(aMsg, SCR_W / 2, 98, &fonts::Font2, P_K, textdatum_t::top_center); }
 }
 static void adminLoop() {
-  bool a = M5.BtnA.wasPressed(), b = M5.BtnB.wasPressed(), p = M5.BtnPWR.wasPressed();
+  bool a = M5.BtnA.wasPressed(), b = M5.BtnB.wasPressed(), p = BTN_PWR.wasPressed();
   if (b) { aSel = (aSel + 1) % NADM; confirmClear = false; sfx(1200, 15); }
   else if (p) { aSel = (aSel + NADM - 1) % NADM; confirmClear = false; sfx(1000, 15); }
   else if (a) {
@@ -176,13 +176,13 @@ void loop() {
       uint32_t now = millis(); aTaps = (now - aLast > 1500) ? 1 : aTaps + 1; aLast = now;
       if (aTaps >= 6) { aTaps = 0; admin = true; aSel = 0; aTop = 0; confirmClear = false; sfx(660, 60); sfx(990, 60, false); sfx(1320, 120, false); }
     }
-    if (M5.BtnB.wasPressed() || M5.BtnPWR.wasPressed()) { about = false; aTaps = 0; sfx(1000, 20); }
+    if (M5.BtnB.wasPressed() || BTN_PWR.wasPressed()) { about = false; aTaps = 0; sfx(1000, 20); }
     renderAbout(); present(0, 0); delay(10); return;
   }
   if (stabStart) {
     if (millis() - stabStart >= 3000) { tilt::zero(); stabStart = 0; sfx(1320, 80); sfx(1760, 120, false); }
   } else {
-    bool a = M5.BtnA.wasPressed(), b = M5.BtnB.wasPressed(), p = M5.BtnPWR.wasPressed();
+    bool a = M5.BtnA.wasPressed(), b = M5.BtnB.wasPressed(), p = BTN_PWR.wasPressed();
     if (b) { sel = (sel + 1) % NROWS; sfx(1200, 15); }
     else if (p) { sel = (sel + NROWS - 1) % NROWS; sfx(1000, 15); }
     else if (a) {

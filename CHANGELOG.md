@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.9.1
+- **Cardputer / Cardputer-ADV**: building with the Arduino IDE now works. The Cardputer board is detected automatically (`ARDUINO_M5STACK_CARDPUTER` / `ARDUINO_M5STACK_CARDPUTER_ADV`), so the keyboard is read and Enter/Space validate the language screen (#8, thanks @BadMustard and @Senshu-hiro2). An empty `src/src.ino` lets the `src` folder open directly in the Arduino IDE.
+- **M5Stack Core (Basic / Grey / Fire), experimental**: new build `AD-Arcade-M5StackCore`. Button C acts as PWR, and the 240x135 game image is centered on the 320x240 screen (#9). Not tested on a real device yet: feedback welcome.
+- **Portability**: every PWR button read now goes through one macro, `BTN_PWR` in `common.h` (#9).
+- **Tetris with buttons**: a quick tap on A+B now rotates (for the StickS3, where PWR cannot be read). Holding A+B still hard drops (#6).
+- **Bug fixes**: the random number helper could not return negative values. Because of this, Emberwood enemies could get a huge speed when changing direction, a charging enemy aimed at a random angle, and some particles in Pocket Siege, Emberwood and Music flew off screen. Chrome Dino no longer paints the whole display white (only its game area).
+- Compiles with no warnings under `-Wall -Wextra`.
+
 ## v1.9.0
 - NEW GAME: **Ember Pinball**, an original pinball table (ember dragon theme) that scrolls with the ball: 3 pop bumpers, 2 slingshots, a drop target bank (+2500 bonus), 3 top lanes that raise the multiplier up to x5 (flippers move the lit lanes), a kick-out saucer, ball save, plunger (hold A for more power) and nudging by shaking the console (too much = TILT). B = left flipper, A = right flipper.
 - New menu icons: Meteors, Maze, Breakout, Invaders, Slalom, Stack, Racing and Lunar Lander now show real pixels from each game; Daily, 2 Players, Trophies, Stats, Music, Skins and Settings have new bold, clean symbols.

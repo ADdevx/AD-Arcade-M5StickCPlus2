@@ -215,7 +215,10 @@ static void step() {
     static int bothT = 0;
     bool ba = M5.BtnA.isPressed(), bb = M5.BtnB.isPressed();
     if (ba && bb) { if (++bothT == 18) { hardDrop(); return; } tx = 0; }          // A+B maintenus = chute (la rotation est sur PWR)
-    else { bothT = 0; tx = ba ? 1.0f : (bb ? -1.0f : 0.f); }
+    else {
+      if (bothT > 0 && bothT < 18 && rotate()) sfx(1100, 12);                      // A+B tapes brievement = tourner (StickS3 : PWR pas lisible)
+      bothT = 0; tx = ba ? 1.0f : (bb ? -1.0f : 0.f);
+    }
     ty = 0;
   }
   // inclinaison moins nerveuse : seuil plus haut pour partir, hysteresis pour s'arreter,
@@ -372,7 +375,7 @@ void loop() {
   uint32_t now = micros();
   if (last == 0) last = now;
   acc += now - last; last = now; if (acc > 100000) acc = 100000;
-  bool a = M5.BtnA.wasPressed(), bb = M5.BtnB.wasPressed(), p = M5.BtnPWR.wasPressed();
+  bool a = M5.BtnA.wasPressed(), bb = M5.BtnB.wasPressed(), p = BTN_PWR.wasPressed();
   switch (state) {
     case TITLE: if (a || bb) { reset(); state = PLAY; sfx(660, 40); } break;
     case PLAY:
