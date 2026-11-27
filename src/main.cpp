@@ -3,10 +3,10 @@
 //  Menu facon console + jeux. Menu : B (cote) = suivant, HAUT (PWR) = precedent, M5 (A) = lancer
 //  Dans un jeu : maintenir HAUT (PWR) 1,5 s = retour au menu
 // ============================================================================
+#include "common.h"            // en premier : il detecte aussi le Cardputer quand on compile avec l'IDE Arduino
 #ifdef AD_CARDPUTER
 #include <M5Cardputer.h>
 #endif
-#include "common.h"
 #include "icons_art.h"
 
 M5Canvas canvas(&M5.Display);
@@ -27,9 +27,10 @@ uint32_t g_rngState = 1; bool g_rngSeeded = false;
 bool g_quit = false;
 int  g_ctrl = 0; bool g_btnCtrl = false;     // commandes : 0 demander, 1 inclinaison, 2 boutons
 bool g_flip = false;                          // ecran retourne
+bool g_pwrIsC = false;                        // M5Stack Core : le bouton C remplace PWR (voir BTN_PWR dans common.h)
 static int g_baseRot = SCR_ROT;
 uint8_t* idxBuffer() { static uint8_t* b = nullptr; if (!b) b = (uint8_t*)malloc(240 * 135); return b; }
-void applyRotation() { M5.Display.setRotation((g_baseRot + (g_flip ? 2 : 0)) & 3); }
+void applyRotation() { M5.Display.setRotation((g_baseRot + (g_flip ? 2 : 0)) & 3); M5.Display.fillScreen(0); }   // fillScreen : efface le bord sur grand ecran
 static const int BRI[5] = {30, 70, 120, 180, 255};
 static const uint32_t SLEEP_MS[5] = {30000, 60000, 120000, 300000, 0};
 static Preferences mp;
@@ -69,8 +70,18 @@ void present(int ox, int oy) {
   if (g_crt) for (int y = 1; y < SCR_H; y += 3) canvas.drawFastHLine(0, y, SCR_W, P_K);
   if (g_fps) { static uint32_t t0 = 0; static int n = 0, fps = 0; n++; if (millis() - t0 >= 1000) { fps = n; n = 0; t0 = millis(); } char b[8]; snprintf(b, sizeof b, "%d", fps); canvas.fillRect(SCR_W - 20, 0, 20, 9, P_K); txt(b, SCR_W - 2, 1, &fonts::Font0, P_S, textdatum_t::top_right); }
   static float z = -1;
-  if (z < 0) { int w = M5.Display.width(), h = M5.Display.height(); if (w < h) { int t = w; w = h; h = t; } z = (w >= SCR_W && h >= SCR_H) ? 0 : fminf((float)w / SCR_W, (float)h / SCR_H); }
-  if (z == 0) canvas.pushSprite(ox, oy);
+  static int cx = 0, cy = 0;
+  if (z < 0) { int w = M5.Display.width(), h = M5.Display.height(); if (w < h) { int t = w; w = h; h = t; } z = (w >= SCR_W && h >= SCR_H) ? 0 : fminf((float)w / SCR_W, (float)h / SCR_H);
+    if (z == 0) { cx = (w - SCR_W) / 2; cy = (h - SCR_H) / 2; } }                               // grand ecran (ex. M5Stack 320x240) : image centree, bord noir
+  if (z == 0) {
+    static int lox = 0, loy = 0;
+    if ((cx || cy) && (ox != lox || oy != loy)) {                                              // secousse sur grand ecran : effacer les traces au bord
+      const int m = 4; M5.Display.fillRect(cx - m, cy - m, SCR_W + 2 * m, m, 0); M5.Display.fillRect(cx - m, cy + SCR_H, SCR_W + 2 * m, m, 0);
+      M5.Display.fillRect(cx - m, cy, m, SCR_H, 0); M5.Display.fillRect(cx + SCR_W, cy, m, SCR_H, 0);
+    }
+    lox = ox; loy = oy;
+    canvas.pushSprite(cx + ox, cy + oy);
+  }
   else canvas.pushRotateZoom(&M5.Display, M5.Display.width() / 2.0f, M5.Display.height() / 2.0f, 0, z, z);   // petit ecran : reduction, bandes noires si besoin
 }
 
@@ -108,10 +119,10 @@ void btnUpdate() {
     static uint32_t uA = 0, uB = 0, uP = 0;
     if (kA) uA = now + 80; if (kB) uB = now + 80; if (kP) uP = now + 80;
     bool goBtn = digitalRead(0) == LOW;                                                // bouton G0 (Go)
-    M5.BtnA.setRawState(now, goBtn || kA || now < uA); M5.BtnB.setRawState(now, kB || now < uB); M5.BtnPWR.setRawState(now, kP || now < uP);
+    M5.BtnA.setRawState(now, goBtn || kA || now < uA); M5.BtnB.setRawState(now, kB || now < uB); BTN_PWR.setRawState(now, kP || now < uP);
   }
 #elif defined(CONFIG_IDF_TARGET_ESP32C6)
-  M5.BtnPWR.setRawState(now, M5.Touch.getCount() > 0);
+  BTN_PWR.setRawState(now, M5.Touch.getCount() > 0);
 #else
   bool pmicBtn = false;
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
@@ -121,9 +132,9 @@ void btnUpdate() {
 #endif
   if (pmicBtn) {
     static uint32_t until = 0;
-    if (M5.BtnPWR.wasHold()) g_pwrHold = true;
-    if (M5.BtnPWR.wasClicked() || M5.BtnPWR.wasHold()) until = now + 120;
-    M5.BtnPWR.setRawState(now, now < until);
+    if (BTN_PWR.wasHold()) g_pwrHold = true;
+    if (BTN_PWR.wasClicked() || BTN_PWR.wasHold()) until = now + 120;
+    BTN_PWR.setRawState(now, now < until);
   }
 #endif
   static uint32_t chord = 0;
@@ -360,7 +371,7 @@ static void intro() {
   btnUpdate();
   while (true) {
     btnUpdate();
-    if (t > 15 && (M5.BtnA.wasPressed() || M5.BtnB.wasPressed() || M5.BtnPWR.wasPressed())) break;
+    if (t > 15 && (M5.BtnA.wasPressed() || M5.BtnB.wasPressed() || BTN_PWR.wasPressed())) break;
     sx -= 5.0f; if (sx + SL * 12 < 0) break;
     canvas.fillScreen(rgb(4, 2, 16));
     for (int y = 0; y < SCR_H; y += 3) canvas.fillRect(0, y, SCR_W, 3, mixc(rgb(4, 2, 16), rgb(30, 12, 52), y * 256 / SCR_H));
@@ -411,8 +422,12 @@ void setup() {
   M5.begin(cfg);
 #endif
   if (M5.getBoard() == m5::board_t::board_M5StickCPlus2) { pinMode(4, OUTPUT); digitalWrite(4, HIGH); }   // maintien de l'alimentation (StickC Plus2 uniquement)
-  M5.Display.setRotation(SCR_ROT);
-  if (M5.Display.width() < M5.Display.height()) g_baseRot = (SCR_ROT + 1) & 3;   // securite : toujours en paysage (selon la version de M5GFX)
+  { auto bd = M5.getBoard();
+    g_pwrIsC = bd == m5::board_t::board_M5Stack || bd == m5::board_t::board_M5StackCore2 || bd == m5::board_t::board_M5Tough
+            || bd == m5::board_t::board_M5StackCoreS3 || bd == m5::board_t::board_M5StackCoreS3SE;
+    if (g_pwrIsC) g_baseRot = 1; }                                                               // M5Stack Core : paysage normal = rotation 1
+  M5.Display.setRotation(g_baseRot);
+  if (M5.Display.width() < M5.Display.height()) g_baseRot = (g_baseRot + 1) & 3;   // securite : toujours en paysage (selon la version de M5GFX)
   applyRotation();
   mp.begin("arcade", false);
   sel = mp.getInt("sel", 0); if (sel < 0 || sel >= NGAMES) sel = 0;
@@ -439,17 +454,17 @@ void setup() {
 
 void loop() {
   btnUpdate();
-  bool anyBtn = M5.BtnA.wasPressed() || M5.BtnB.wasPressed() || M5.BtnPWR.wasPressed();
+  bool anyBtn = M5.BtnA.wasPressed() || M5.BtnB.wasPressed() || BTN_PWR.wasPressed();
   if (wizard::active()) { wizard::loop(); lastAct = millis(); return; }
   if (tilt::calibrating()) { tilt::calibrationStep(); lastAct = millis(); return; }
   if (running >= 0) {
-    if (M5.BtnPWR.pressedFor(1500) || g_pwrHold || g_quit) { sfx(440, 60); sfx(330, 90, false); toMenu(); return; }
+    if (BTN_PWR.pressedFor(1500) || g_pwrHold || g_quit) { sfx(440, 60); sfx(330, 90, false); toMenu(); return; }
     GAMES[running].loop();
     stats::tick(running < trophy::T_COUNT ? running : session::activeGame());
     return;
   }
   if (choosing >= 0) {                                                      // ecran de choix des commandes
-    if (M5.BtnB.wasPressed() || M5.BtnPWR.wasPressed()) { chooseSel ^= 1; sfx(1200, 15); }
+    if (M5.BtnB.wasPressed() || BTN_PWR.wasPressed()) { chooseSel ^= 1; sfx(1200, 15); }
     if (M5.BtnA.wasPressed()) {
       ctrl::remember(choosing, chooseSel == 1); sfx(880, 40); sfx(1320, 60, false);
       if (!chooseSel && tilt::adapt()) adapted = true;
@@ -472,7 +487,7 @@ void loop() {
     batChg = M5.Power.isCharging() == m5::Power_Class::is_charging;
   }
   if (M5.BtnB.wasPressed()) { sel = (sel + 1) % NGAMES; slide = -1; sfx(1200, 20); }
-  if (M5.BtnPWR.wasPressed()) { sel = (sel + NGAMES - 1) % NGAMES; slide = 1; sfx(1000, 20); }
+  if (BTN_PWR.wasPressed()) { sel = (sel + NGAMES - 1) % NGAMES; slide = 1; sfx(1000, 20); }
   if (slide != 0) { slide *= 0.7f; if (fabsf(slide) < 0.03f) slide = 0; }
   if (M5.BtnA.wasPressed()) {
     mp.putInt("sel", sel); sfx(880, 50); sfx(1320, 90, false);

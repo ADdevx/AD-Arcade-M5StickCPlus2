@@ -349,9 +349,9 @@ static void render() {
 static void handleInput() {
   bool aP = M5.BtnA.wasPressed(), aR = M5.BtnA.wasReleased();
 #if SWAP_SIDE_BUTTONS
-  bool pauseEv = M5.BtnB.wasPressed(), duckEv = M5.BtnPWR.wasPressed(); duckHeld = M5.BtnPWR.isPressed();
+  bool pauseEv = M5.BtnB.wasPressed(), duckEv = BTN_PWR.wasPressed(); duckHeld = BTN_PWR.isPressed();
 #else
-  bool pauseEv = M5.BtnPWR.wasPressed(), duckEv = M5.BtnB.wasPressed(); duckHeld = M5.BtnB.isPressed();
+  bool pauseEv = BTN_PWR.wasPressed(), duckEv = M5.BtnB.wasPressed(); duckHeld = M5.BtnB.isPressed();
 #endif
   switch (state) {
     case TITLE: if (aP) beginIntro(); break;
@@ -375,7 +375,7 @@ void begin() {
   clouds[nClouds++] = {(float)VIEW_W - 120, 40, 200};
   dinoX = 12; dinoY = GROUND_YPOS; blinkFor = 0; blinkDelay = 120; frameCount = 0;
   computePalette();
-  M5.Display.fillScreen(0xFFFF);
+  canvas.fillScreen(0xFFFF);   // (pas M5.Display : sur un grand ecran, le bord autour du jeu reste noir)
 }
 
 void loop() {

@@ -80,9 +80,9 @@ void dateLoop() {
   uint32_t now = millis();
   if (M5.BtnA.wasPressed()) { dateChange(1); dRep = now + 450; }
   else if (M5.BtnA.isPressed() && dRep && now > dRep) { dateChange(1); dRep = now + 110; }
-  if (M5.BtnPWR.wasPressed()) { dateChange(-1); dRep = now + 450; }
-  else if (M5.BtnPWR.isPressed() && dRep && now > dRep) { dateChange(-1); dRep = now + 110; }
-  if (!M5.BtnA.isPressed() && !M5.BtnPWR.isPressed()) dRep = 0;
+  if (BTN_PWR.wasPressed()) { dateChange(-1); dRep = now + 450; }
+  else if (BTN_PWR.isPressed() && dRep && now > dRep) { dateChange(-1); dRep = now + 110; }
+  if (!M5.BtnA.isPressed() && !BTN_PWR.isPressed()) dRep = 0;
   if (M5.BtnB.wasPressed()) {
     if (dField < 4) { dField++; sfx(1200, 15); }
     else {
@@ -123,7 +123,7 @@ void loop() {
   uint32_t now = millis(); int t = (int)((now - t0) / 50);
   if (st == LANG) {
     static int sel = 0;
-    if (M5.BtnB.wasPressed() || M5.BtnPWR.wasPressed()) { sel ^= 1; g_lang = sel; sfx(1000, 15); }
+    if (M5.BtnB.wasPressed() || BTN_PWR.wasPressed()) { sel ^= 1; g_lang = sel; sfx(1000, 15); }
     if (M5.BtnA.wasPressed()) { g_lang = sel; saveSettings(); sfx(988, 60); sfx(1318, 90, false); tilt::startCalibration(); st = CALIB; return; }
     ui::bg(t);
     logo(8);
@@ -147,7 +147,7 @@ void loop() {
     return;
   }
   if (st == DONE) {
-    if (M5.BtnA.wasPressed() || M5.BtnB.wasPressed() || M5.BtnPWR.wasPressed()) { st = NONE; sfx(1320, 60); return; }
+    if (M5.BtnA.wasPressed() || M5.BtnB.wasPressed() || BTN_PWR.wasPressed()) { st = NONE; sfx(1320, 60); return; }
     ui::bg(t);
     logo(8);
     ui::window(36, 44, 168, 66, P_S, L("ALL SET!", "C'EST PRET !"));
@@ -333,7 +333,7 @@ void loop() {
   char b[48];
   if (phase == PICK) {
     if (M5.BtnB.wasPressed()) { pick = (pick + 1) % NELIG; sfx(1200, 15); }
-    if (M5.BtnPWR.wasPressed()) { pick = (pick + NELIG - 1) % NELIG; sfx(1000, 15); }
+    if (BTN_PWR.wasPressed()) { pick = (pick + NELIG - 1) % NELIG; sfx(1000, 15); }
     if (M5.BtnA.wasPressed()) { game = ELIG[pick]; rounds = mode == 2 ? 3 : 1; soloBest = 0; startMatch(); sfx(880, 40); sfx(1320, 60, false); return; }
     header(L("2 PLAYERS", "2 JOUEURS"), P_G);
     int sl = (int)(sinf(anim * 0.08f) * 2);

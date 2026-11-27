@@ -247,7 +247,7 @@ void loop() {
   if (!fb) { canvas.fillScreen(0); txt("NO MEMORY", 120, 60, &fonts::Font2, 0xFFFF, textdatum_t::top_center); present(0, 0); return; }
   uint32_t now = micros(); if (!last) last = now;
   acc += now - last; last = now; if (acc > 100000) acc = 100000;
-  aPend |= M5.BtnA.wasPressed(); bPend |= M5.BtnB.wasPressed(); pPend |= M5.BtnPWR.wasPressed();
+  aPend |= M5.BtnA.wasPressed(); bPend |= M5.BtnB.wasPressed(); pPend |= BTN_PWR.wasPressed();
   while (acc >= STEP_US) {
     bool aP = aPend, bP = bPend, pP = pPend; aPend = bPend = pPend = false;
     switch (state) {

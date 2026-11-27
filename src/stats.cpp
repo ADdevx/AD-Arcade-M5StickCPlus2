@@ -102,7 +102,7 @@ static void render() {
 
 void loop() {
   if (M5.BtnA.wasPressed() || M5.BtnB.wasPressed()) { page = (page + 1) % PGS; sfx(1200, 15); }
-  else if (M5.BtnPWR.wasPressed()) { page = (page + PGS - 1) % PGS; sfx(1000, 15); }
+  else if (BTN_PWR.wasPressed()) { page = (page + PGS - 1) % PGS; sfx(1000, 15); }
   render();
   present(0, 0);
   delay(10);

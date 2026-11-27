@@ -320,7 +320,7 @@ void loop() {
   uint32_t now = micros();
   if (last == 0) last = now;
   acc += now - last; last = now; if (acc > 100000) acc = 100000;
-  bool a = M5.BtnA.wasPressed(), p = M5.BtnPWR.wasPressed(), b = M5.BtnB.wasPressed();
+  bool a = M5.BtnA.wasPressed(), p = BTN_PWR.wasPressed(), b = M5.BtnB.wasPressed();
   switch (state) {
     case SEL_CAR:
       if (b) { carSel = (carSel + 1) % 3; sfx(1200, 20); } else if (p) { carSel = (carSel + 2) % 3; sfx(1000, 20); }

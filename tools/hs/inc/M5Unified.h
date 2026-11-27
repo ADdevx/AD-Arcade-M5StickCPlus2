@@ -20,8 +20,8 @@ struct TextRec { std::string s; int x, y; int font; float size; int datum; uint1
 extern std::vector<TextRec> g_texts;
 namespace m5 { struct rtc_time_t { int8_t hours=0, minutes=0, seconds=0; }; struct rtc_date_t { int16_t year=2000; int8_t month=1, date=1, weekDay=0; }; }
 struct Rtc_ { bool isEnabled(){return true;} m5::rtc_date_t getDate(); void setDate(const m5::rtc_date_t& d); m5::rtc_time_t getTime(); void setTime(const m5::rtc_time_t& t); };
-namespace m5 { enum class board_t { board_unknown, board_M5StickCPlus2, board_M5StickC, board_M5StickCPlus }; }
-struct M5Display_ { void setRotation(int) {} void setBrightness(int) {} void invertDisplay(bool) {} void fillScreen(uint16_t) {} int width() { return 240; } int height() { return 135; } };
+namespace m5 { enum class board_t { board_unknown, board_M5StickCPlus2, board_M5StickC, board_M5StickCPlus, board_M5Stack, board_M5StackCore2, board_M5Tough, board_M5StackCoreS3, board_M5StackCoreS3SE }; }
+struct M5Display_ { void setRotation(int) {} void setBrightness(int) {} void invertDisplay(bool) {} void fillScreen(uint16_t) {} void fillRect(int, int, int, int, uint16_t) {} int width() { return 240; } int height() { return 135; } };
 struct Touch_ { int getCount() { return 0; } };
 struct M5Canvas {
   void drawArc(int,int,int,int,float,float,uint16_t){} void setClipRect(int,int,int,int){} void clearClipRect(){}
@@ -57,5 +57,5 @@ struct Imu_ { bool isEnabled(){return true;} void getAccel(float* x,float* y,flo
 struct M5Cfg {};
 namespace m5 { struct Power_Class { enum { is_discharging=0, is_charging=1, charge_unknown=2 }; }; }
 struct Pwr_ { int getBatteryLevel(){return 63;} int isCharging(){return 1;} };
-struct M5_ { Rtc_ Rtc; Pwr_ Power; M5Display_ Display; Touch_ Touch; m5::board_t getBoard(){return m5::board_t::board_M5StickCPlus2;} Spk Speaker; Imu_ Imu; Btn BtnA, BtnB, BtnPWR; M5Cfg config(){return {};} void begin(M5Cfg){} void update(){} };
+struct M5_ { Rtc_ Rtc; Pwr_ Power; M5Display_ Display; Touch_ Touch; m5::board_t getBoard(){return m5::board_t::board_M5StickCPlus2;} Spk Speaker; Imu_ Imu; Btn BtnA, BtnB, BtnC, BtnPWR; M5Cfg config(){return {};} void begin(M5Cfg){} void update(){} };
 extern M5_ M5;

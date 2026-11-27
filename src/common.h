@@ -6,10 +6,23 @@
 #include <Preferences.h>
 #include <math.h>
 
+// Cardputer / Cardputer-ADV : PlatformIO passe -DAD_CARDPUTER ; l'IDE Arduino ne le fait pas, on le deduit de la carte choisie
+#if !defined(AD_CARDPUTER) && (defined(ARDUINO_M5STACK_CARDPUTER) || defined(ARDUINO_M5STACK_CARDPUTER_ADV) || defined(ARDUINO_M5Stack_Cardputer))
+#define AD_CARDPUTER 1
+#endif
+#if defined(AD_CARDPUTER) && !defined(SCR_ROT)
+#define SCR_ROT 0
+#endif
+
+// Bouton "PWR" du jeu (pause / precedent / retour menu) : un seul endroit pour l'adapter a chaque modele.
+// M5Stack Core (Basic / Grey / Fire / Core2 / CoreS3) : le bouton power n'est pas lisible -> on prend le bouton C.
+extern bool g_pwrIsC;
+#define BTN_PWR (g_pwrIsC ? M5.BtnC : M5.BtnPWR)
+
 #ifndef SCR_ROT
 #define SCR_ROT 3          // 1 ou 3 : change le sens de l'ecran (donc haut/bas physiques)
 #endif
-#define AD_VERSION "1.9.0"   // version affichee dans les reglages
+#define AD_VERSION "1.9.1"   // version affichee dans les reglages
 #define SCR_W   240
 #define SCR_H   135
 
@@ -20,7 +33,8 @@ static inline uint16_t rgb(uint8_t r, uint8_t g, uint8_t b) { return ((r & 0xF8)
 extern uint32_t g_rngState; extern bool g_rngSeeded;
 static inline uint32_t rawRand() { if (!g_rngSeeded) return esp_random(); uint32_t x = g_rngState; x ^= x << 13; x ^= x >> 17; x ^= x << 5; g_rngState = x; return x; }
 static inline void seedRand(uint32_t s) { g_rngState = s ? s : 0x9E3779B9u; g_rngSeeded = true; }
-static inline uint32_t rnd(uint32_t a, uint32_t b) { return a + rawRand() % (b - a + 1); }
+// int (pas uint32_t) : "rnd(0, 20) - 10" ou "-rnd(5, 20)" doivent pouvoir etre negatifs
+static inline int rnd(int a, int b) { return a + (int)(rawRand() % (uint32_t)(b - a + 1)); }
 
 // ----------------------------- palette pixel art commune (8 couleurs) : style 16 bits, contour noir, 3 tons par matiere
 #define P_K rgb(10, 14, 13)      // noir : contours, ombres profondes
