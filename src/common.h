@@ -22,7 +22,7 @@ extern bool g_pwrIsC;
 #ifndef SCR_ROT
 #define SCR_ROT 3          // 1 ou 3 : change le sens de l'ecran (donc haut/bas physiques)
 #endif
-#define AD_VERSION "1.9.1"   // version affichee dans les reglages
+#define AD_VERSION "1.9.2"   // version affichee dans les reglages
 #define SCR_W   240
 #define SCR_H   135
 
