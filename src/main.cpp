@@ -118,7 +118,9 @@ void btnUpdate() {
     // pour qu'il passe l'anti-rebond des boutons (sinon "Entree" ne valide pas toujours)
     static uint32_t uA = 0, uB = 0, uP = 0;
     if (kA) uA = now + 80; if (kB) uB = now + 80; if (kP) uP = now + 80;
-    bool goBtn = digitalRead(0) == LOW;                                                // bouton G0 (Go)
+    // bouton G0 (Go) : lu directement (comme M5Unified). digitalRead(0) renvoie toujours LOW avec Arduino-ESP32 3.x
+    // car la broche n'a pas ete declaree par pinMode() Arduino : A restait "appuye" et Entree / Go ne validaient jamais (issue #8)
+    bool goBtn = !m5gfx::gpio_in(GPIO_NUM_0);
     M5.BtnA.setRawState(now, goBtn || kA || now < uA); M5.BtnB.setRawState(now, kB || now < uB); BTN_PWR.setRawState(now, kP || now < uP);
   }
 #elif defined(CONFIG_IDF_TARGET_ESP32C6)
@@ -425,7 +427,7 @@ void setup() {
   { auto bd = M5.getBoard();
     g_pwrIsC = bd == m5::board_t::board_M5Stack || bd == m5::board_t::board_M5StackCore2 || bd == m5::board_t::board_M5Tough
             || bd == m5::board_t::board_M5StackCoreS3 || bd == m5::board_t::board_M5StackCoreS3SE;
-    if (g_pwrIsC) g_baseRot = 1; }                                                               // M5Stack Core : paysage normal = rotation 1
+    if (g_pwrIsC) g_baseRot = 0; }                                                               // M5Stack Core : paysage normal (boutons en bas) = rotation 0 (teste sur Grey, issue #9)
   M5.Display.setRotation(g_baseRot);
   if (M5.Display.width() < M5.Display.height()) g_baseRot = (g_baseRot + 1) & 3;   // securite : toujours en paysage (selon la version de M5GFX)
   applyRotation();

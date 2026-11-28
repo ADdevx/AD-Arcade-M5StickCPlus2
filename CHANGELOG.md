@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.9.2
+- **Cardputer / Cardputer-ADV**: Enter, Space and the Go button work again as A (the language screen could not be validated). The Go button was read with `digitalRead(0)`, which always returns LOW with Arduino-ESP32 3.x, so A stayed pressed forever (#8).
+- **M5Stack Core (Basic / Grey / Fire / Core2)**: normal landscape orientation, buttons below the screen (#9, patch by @Senshu-hiro2).
+
 ## v1.9.1
 - **Cardputer / Cardputer-ADV**: building with the Arduino IDE now works. The Cardputer board is detected automatically (`ARDUINO_M5STACK_CARDPUTER` / `ARDUINO_M5STACK_CARDPUTER_ADV`), so the keyboard is read and Enter/Space validate the language screen (#8, thanks @BadMustard and @Senshu-hiro2). An empty `src/src.ino` lets the `src` folder open directly in the Arduino IDE.
 - **M5Stack Core (Basic / Grey / Fire), experimental**: new build `AD-Arcade-M5StackCore`. Button C acts as PWR, and the 240x135 game image is centered on the 320x240 screen (#9). Not tested on a real device yet: feedback welcome.
